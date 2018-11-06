@@ -1,11 +1,24 @@
 #include    <avr/io.h>
-#include    <avr/pgmspace.h>
 #include    <avr/interrupt.h>
 #include    <stdint.h>
+
+#include    <avr/pgmspace.h>
 
 #include    "./gameplay.h"
 #include    "../libglcd/glcd.h"
 #include    "../font/Standard5x7.h"
+
+
+
+// string constants
+// max 20 character/line
+const char * const user_txt1 PROGMEM  = "Select player K0-4";
+const char * const user_txt2 PROGMEM  = "K0 for menu";
+const char * const menu_txt1 PROGMEM = "K0 for Highscores";
+const char * const menu_txt2 PROGMEM = "K1 to select Player";
+const char * const hs_txt1 PROGMEM   = "K1 for menu";
+
+
 
 static volatile uint8_t s_tick;
 static volatile uint16_t score;
@@ -38,7 +51,7 @@ void gameMenu(void)
 {
     // print text to glcd
     glcdFillScreen(GLCD_CLEAR);
-    xy_point p  = { .x = 1, .y = 30 };
+    xy_point p  = { .x = 1, .y = 0 };
     glcdDrawText(menu_txt1, p, &Standard5x7, &glcdSetPixel);
     p.x = 1;
     p.y = 40;
@@ -48,14 +61,17 @@ void gameMenu(void)
 void gameHSTable(void)
 {
     // todo: print highscore table
+    glcdFillScreen(GLCD_CLEAR);
+    xy_point p  = {.x = 5, .y = 0};
+    glcdDrawText(hs_txt1, p, &Standard5x7, &glcdSetPixel);
 }
 
 void gamePlayerSelect(void)
 {
     // print text to glcd
     glcdFillScreen(GLCD_CLEAR);
-    xy_point p  = {.x = 1, .y = 30};
-    glcdDrawText(menu_txt1, p, &Standard5x7, &glcdSetPixel);
+    xy_point p  = {.x = 1, .y = 20};
+    glcdDrawText(user_txt1, p, &Standard5x7, &glcdSetPixel);
 }
     
 void gameLoop(void)
@@ -82,15 +98,15 @@ void gameUserInput(uint8_t button)
 {
     if(state == &gameMenu){
         // enter HS Table
-        if(!(button & (1 << PK0)))
+        if(button & (1 << PK0))
             state = &gameHSTable;
         // enter User Select
-        if(!(button & (1 << PK1)))
+        if(button & (1 << PK1))
             state = &gamePlayerSelect;
 
     }else if(state == &gameHSTable){
         // return to menu
-        if(!(button & (1 << PK1)))
+        if(button & (1 << PK1))
             state = &gameMenu;
 
     }else if(state == &gamePlayerSelect){
@@ -108,7 +124,8 @@ void gameUserInput(uint8_t button)
             case (1 << PK1): cur_player = 1; break;
             case (1 << PK2): cur_player = 2; break;
             case (1 << PK3): cur_player = 3; break;
-            default:         cur_player = 4; break;
+            case (1 << PK4): cur_player = 4; break;
+            default: TCCR3B = 0; state = &gamePlayerSelect ; break;
         }
     }
 
@@ -135,6 +152,6 @@ ISR(PCINT2_vect)
 {
     sei();
 
-    gameUserInput(PINK & 0x1F);
+    gameUserInput((~PINK) & 0x1F);
 }
 

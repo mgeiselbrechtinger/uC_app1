@@ -1,11 +1,5 @@
-#ifndef _GAMEPLAY_H_
-#define _GAMEPLAY_H_
-
-// string constants
-// max 25 character/line
-static const __flash  char    user_txt[] =  "Select player K0-4";
-static const __flash  char    menu_txt1[] = "Press K0 for Highscores";
-static const __flash  char    menu_txt2[] = "Press K1 to select Player";
+#ifndef GAMEPLAY_H
+#define GAMEPLAY_H
 
 // prototypes
 void gameInit(void);
