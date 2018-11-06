@@ -73,6 +73,7 @@ error_t halWT41FcUartSend(uint8_t byte)
     sndBuff = byte;
     snd_flag = 1;
 
+    // test if send not possible
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
         // reset still active
         if(!(PORTJ  & (1 << RST)))
@@ -91,6 +92,7 @@ error_t halWT41FcUartSend(uint8_t byte)
         }
     }
 
+    // send possible
     snd_flag = 0;   
     UDR3 = byte;
     // enable transmitt interrupt
@@ -108,7 +110,8 @@ ISR(TIMER1_COMPA_vect)
 
     // re-enable BT module
     PORTJ |= (1 << RST);
-
+    
+    sei();
     // check for buffered msg
     if(snd_flag == 1)
         halWT41FcUartSend(sndBuff);
@@ -131,16 +134,17 @@ ISR(USART3_RX_vect)
     rcvBuff[head] = UDR3;
     head += 1;
 
+    // buffer ovf flag
     if(head > 31){
         head = 0;
         rnd_flag = 1;
     }
-
+    // calculate free buffer space
     if(rnd_flag == 0)
         free = 32 - head - tail;
     else
         free = tail - head;
-    
+
     // buffer too full, set CTS
     if(free < 5)
         PORTJ |= (1 << CTS);
@@ -154,25 +158,24 @@ ISR(USART3_RX_vect)
 
 static void empty_buffer()
 {
-
     buff_active_flag = 1;
     
-    // head went over end of buffer
+    // buffer ovf occured
     if(rnd_flag == 1){
         for(; tail < 32; tail++){
             _rcvCallback(rcvBuff[tail]);
             // buffer empty enough, release CTS
-            if((tail - head) > 16)
+            if((32 - tail - head) < 16)
                 PORTJ &= ~(1 << CTS);
         }
         tail = 0;
         rnd_flag = 0;
     }
- 
+    // no buffer ovf
     for(; tail < head; tail++){
         _rcvCallback(rcvBuff[tail]);
         // buffer empty enough, release CTS
-        if((head - tail) > 16)
+        if((head - tail) < 16)
             PORTJ &= ~(1 << CTS);
     }
 
@@ -184,6 +187,7 @@ ISR(PCINT1_vect)
 {
     // dissable pinchange interrupt
     PCICR &= ~(1 << PCIE1);
+    sei();
     halWT41FcUartSend(sndBuff);
         
 }
@@ -193,5 +197,6 @@ ISR(USART3_UDRE_vect)
 {
     // dissable reg empty interrupt
     UCSR3B &= ~(1 << UDRIE3);
+    sei();
     halWT41FcUartSend(sndBuff);
 }

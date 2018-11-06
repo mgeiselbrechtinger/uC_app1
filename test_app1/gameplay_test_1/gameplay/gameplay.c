@@ -1,10 +1,13 @@
 #include    <avr/io.h>
 #include    <avr/interrupt.h>
+#include    <stdio.h>
+#include    <string.h>
 #include    <stdint.h>
 
 #include    <avr/pgmspace.h>
 
 #include    "./gameplay.h"
+#include    "./text.h"
 #include    "../libglcd/glcd.h"
 #include    "../font/Standard5x7.h"
 
@@ -60,10 +63,20 @@ void gameMenu(void)
 
 void gameHSTable(void)
 {
-    // todo: print highscore table
+    char txt_buff[15];
+    char int_buff[6];
+    uint8_t i;
+    xy_point p = {.x = 1, .y = 0};
+
     glcdFillScreen(GLCD_CLEAR);
-    xy_point p  = {.x = 5, .y = 0};
-    glcdDrawText(hs_txt1, p, &Standard5x7, &glcdSetPixel);
+    for(i = 0; i <= 4; i++){
+        sprintf(int_buff, "%d", highscore[i]);
+        strcpy_P(txt_buff, (PGM_P)pgm_read_word(&(hs_table[i])));
+        strcat(txt_buff, int_buff);
+        glcdDrawText(txt_buff, p, &Standard5x7, &glcdSetPixel);
+        p.y += 10;
+    }
+    glcdDrawTextPgm(hs_table[i], p, &Standard5x7, &glcdSetPixel);
 }
 
 void gamePlayerSelect(void)
@@ -151,7 +164,7 @@ ISR(TIMER3_COMPA_vect)
 ISR(PCINT2_vect)
 {
     sei();
-
+    // invert pins
     gameUserInput((~PINK) & 0x1F);
 }
 
