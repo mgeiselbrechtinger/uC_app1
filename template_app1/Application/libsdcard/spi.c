@@ -29,8 +29,8 @@ void spiSend(uint8_t data)
 
 uint8_t spiReceive(void)
 {
-    // spiSend(0xFF); ???
-    spiSend(0xFF);
+    // send dummypattern to SD while receiving
+    SPDR = 0xFF;
     // busy wait (allowed)
     while(!(SPSR & (1 << SPIF)))
         ;

@@ -3,6 +3,7 @@
 #include    <stdint.h>
 #include    <util/atomic.h>
 
+#include    "./hal_wt41_fc_uart.h"
 #include    "./util.h"
 
 #define CTS     (PJ2)
@@ -12,6 +13,7 @@
 #define BAUD    (1000000)
 #define UBRR_VAL (FOSC/(16*BAUD)-1)
 
+static uint8_t buff_active_flag;
 static uint8_t rcvBuff[32];
 static uint8_t head;
 static uint8_t tail;
@@ -25,7 +27,7 @@ static void (*_rcvCallback)(uint8_t rcvData);
 
 error_t halWT41FcUartInit(void (*sndCallback)(), void (*rcvCallback)(uint8_t))
 {
-    // todo: port initialization ???
+    // port initialization
     PORTJ = 0;
     DDRJ  = (1 << PJ0) | (1 << CTS) | (1 << RST);
 
@@ -33,26 +35,32 @@ error_t halWT41FcUartInit(void (*sndCallback)(), void (*rcvCallback)(uint8_t))
         // set baudrate to 1M
         UBRR3H = 0x0F & (int8_t)(UBRR_VAL >> 8);
         UBRR3L = (int8_t)UBRR_VAL;
-        // enable receiver and transmitter and interrupts
-        UCSR3B = (1 << RXEN3) | (1 << TXEN3) | (1 << RXCIE3);
+        // enable receiver, transmitter and interrupts
+        UCSR3B = (1 << RXEN3) | (1 << TXEN3) | (1 << RXCIE3) | (1 << UDRIE3);
         // set frame format, 8data, 1stop bit 
         UCSR3C = (1 << UCSZ30) | (1 << UCSZ31);
     }
-    // setup timer 0, 5ms, prescaler=1024, cnt=79
-    OCR0A = 79;
-    TCNT0 = 0;
-    TIMSK0 = (1 << OCIE0A);
-    TCCR0A = (1 << WGM01);
-    TCCR0B = (1 << CS00) | (1 << CS02);
-    // setup ext. interrupt for RTS pin
+
+    // setup timer 1, 5ms, prescaler=1024, cnt=79
+    OCR1A = 79;
+    TCNT1 = 0;
+    TIMSK1 = (1 << OCIE1A);
+    TCCR1A = 0;
+    TCCR1B = (1 << WGM12) | (1 << CS10) | (1 << CS12);
+    
+    // setup pinchange interrupt for RTS pin
     PCMSK1 |= (1 << PCINT12);
+    
     // reset BT module
     PORTJ &= ~(1 << RST);
+    
     // setup receive buffer
     head = 0;
     tail = 0;
     rnd_flag = 0;
     snd_flag = 0;
+    buff_active_flag = 0;
+    
     // add callback functions
     _sndCallback = sndCallback;
     _rcvCallback = rcvCallback;
@@ -71,11 +79,13 @@ error_t halWT41FcUartSend(uint8_t byte)
             return SUCCESS;
         // RTS set
         if(PORTJ & (1 << RTS)){
+            // enable pinchange intr on RTS
             PCICR  |= (1 << PCIE1);
-            return SUCCES;
+            return SUCCESS;
         }
         // UART tx reg full
         if(!(UCSR3A & (1 << UDRE3))){
+            // enable intr on reg empty
             UCSR3B |=(1 << UDRIE3);
             return SUCCESS;
         }
@@ -83,21 +93,34 @@ error_t halWT41FcUartSend(uint8_t byte)
 
     snd_flag = 0;   
     UDR3 = byte;
-    _sndCallback();
+    // enable transmitt interrupt
+    UCSR3B |= (1 << TXCIE3);
+
     return SUCCESS;
 }
 
 // reset timer interrupt
-ISR(TIMER0_COMPA_vect)
+ISR(TIMER1_COMPA_vect)
 {
     // dissable timer
-    TIMSK0 = 0;
-    // enable BT module
+    TIMSK1 = 0;
+    TCCR1B = 0;
+
+    // re-enable BT module
     PORTJ |= (1 << RST);
+
     // check for buffered msg
     if(snd_flag == 1)
         halWT41FcUartSend(sndBuff);
+}
 
+// UART transmitt interrupt
+ISR(USART3_TX_vect)
+{
+    // dissable transmitt interrupt 
+    UCSR3B &= ~(1 << TXCIE3);
+    sei();
+    _sndCallback();
 }
 
 // UART receive interrupt
@@ -121,22 +144,45 @@ ISR(USART3_RX_vect)
     // buffer too full, set CTS
     if(free < 5)
         PORTJ |= (1 << CTS);
-    // buffer empty enough, release CTS
-    if(free > 16)
-        PORTJ &= ~(1 << CTS);
 
-    // callback with interrupts enabled
-    // and re-entering this ISR dissabled 
-    UCSR3B &= ~(1 << RXCIE3);
+    // empty ringbuffer
     sei();
-    _rcvCallback(rcvBuff[head-1]);
-    cli();
-    UCSR3B |= (1 << RXCIE3);
+    if(buff_active_flag = 0)
+        empty_buffer();
+
+}
+
+static void empty_buffer()
+{
+
+    buff_active_flag = 1;
+    
+    // head went over end of buffer
+    if(rnd_flag == 1){
+        for(; tail < 32; tail++){
+            _rcvCallback(rcvBuff[tail]);
+            // buffer empty enough, release CTS
+            if((tail - head) > 16)
+                PORTJ &= ~(1 << CTS);
+        }
+        tail = 0;
+        rnd_flag = 0;
+    }
+ 
+    for(; tail < head; tail++){
+        _rcvCallback(rcvBuff[tail]);
+        // buffer empty enough, release CTS
+        if((head - tail) > 16)
+            PORTJ &= ~(1 << CTS);
+    }
+
+    buff_active_flag = 0;
 }
 
 // RTS pin change interrupt
 ISR(PCINT1_vect)
 {
+    // dissable pinchange interrupt
     PCICR &= ~(1 << PCIE1);
     halWT41FcUartSend(sndBuff);
         
@@ -145,6 +191,7 @@ ISR(PCINT1_vect)
 // UART tx reg empty
 ISR(USART3_UDRE_vect)
 {
+    // dissable reg empty interrupt
     UCSR3B &= ~(1 << UDRIE3);
     halWT41FcUartSend(sndBuff);
 }
