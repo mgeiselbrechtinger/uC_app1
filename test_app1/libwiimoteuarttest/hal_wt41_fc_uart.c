@@ -123,9 +123,6 @@ ISR(TIMER1_COMPA_vect)
     // re-enable BT module
     PORTJ |= (1 << RST);
     
-	// TODO debug
-	PORTB |= 2;
-
     sei();
     // check for buffered msg
     if(snd_flag == 1)
@@ -141,9 +138,6 @@ ISR(USART3_RX_vect)
 	
 	if((32 - rcv_buff_len) < 5)
 		PORTJ |= (1 << CTS);
-
-	// TODO debug
-	PORTB |= 4;
 
     // empty ringbuffer
     if(buff_active_flag == 0)
@@ -174,8 +168,6 @@ static void empty_buffer()
 // RTS pin change interrupt
 ISR(PCINT1_vect)
 {
-	// TODO debug
-	PORTB |= 16;
     // dissable pinchange interrupt
     PCICR &= ~(1 << PCIE1);
     sei();

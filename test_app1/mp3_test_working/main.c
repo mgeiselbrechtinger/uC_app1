@@ -11,7 +11,7 @@ int main (void)
     spiInit();
     mp3Init(cbf);
     sei();
+	mp3StartSineTest();
     for(;;){
-        mp3StartSineTest();
     }
 }

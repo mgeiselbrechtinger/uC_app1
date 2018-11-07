@@ -1,0 +1,2 @@
+made set of buff_active_flag atomic worked
+but can't remove debug leds on PORTB???
