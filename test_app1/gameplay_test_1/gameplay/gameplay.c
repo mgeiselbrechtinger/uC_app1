@@ -22,37 +22,46 @@ const char * const menu_txt2 PROGMEM = "K1 to select Player";
 const char * const hs_txt1 PROGMEM   = "K1 for menu";
 
 
+// function pointer
+typedef void (*state_fn)(void);
+volatile state_fn gameState;
 
 static volatile uint8_t s_tick;
 static volatile uint16_t score;
-static volatile uint8_t cur_player;
+static volatile uint8_t player;
 static volatile uint16_t highscore[] = {0, 0, 0, 0, 0};
 
-typedef void (*state_fn)(void);
-
-static volatile state_fn state;
 
 void gameInit(void)
 {
-    // todo: initialization
+    // user input port
     PORTK |= (1 << PK0) | (1 << PK1) | (1 << PK2) | (1 << PK3) | (1<< PK4);
     DDRK  &= ~((1 << PK0) | (1 << PK1) | (1 << PK2) | (1 << PK3) | (1<< PK4));
     // setup pinchange interrupt
     PCMSK2 = (1 << PCINT16) | (1 << PCINT17) | (1 << PCINT18) | (1 << PCINT19) | (1 << PCINT20);
     PCICR |= (1 << PCIE2);
+
     // setup game tick timer3
     // TCNT3 = 0;
     OCR3A = 3125;
     TCCR3A = 0;
     // TCCR3B = (1 << WGM32) | (1 << CS32);
-    // change state
-    state = &gameMenu;
-    state();
+
+    // TODO: change to gameWiiInit
+    gameState = &gameMenu;
+    gameState();
+}
+
+void gameWiiInit(void)
+{
+    // TODO: setup wii callbacks
+    // TODO: call wii connect
+    // print info to press sync button
 }
 
 void gameMenu(void)
 {
-    // print text to glcd
+    // print menu to glcd
     glcdFillScreen(GLCD_CLEAR);
     xy_point p  = { .x = 1, .y = 0 };
     glcdDrawText(menu_txt1, p, &Standard5x7, &glcdSetPixel);
@@ -89,42 +98,48 @@ void gamePlayerSelect(void)
     
 void gameLoop(void)
 {
-    // todo: implement game play
-
-    // stop game tick timer
-    TCCR3B = 0;
-    state = &gameOver;
-    state();
+    // TODO: implement game play
+    //
+    // read accelerometer 
+    // adjust ball
+    // shift screen
+    // 
+    // check if game over
+    if(score == 5){
+        TCCR3B = 0;
+        gameState = &gameOver;
+        gameState();
+    }
 }
 
 void gameOver(void)
 {
     // set score
-    if(score > highscore[cur_player])
-        highscore[cur_player] = score;
+    if(score > highscore[player])
+        highscore[player] = score;
     // display highscore
-    state = &gameHSTable;
-    state();
+    gameState = &gameHSTable;
+    gameState();
 }
 
 void gameUserInput(uint8_t button)
 {
-    if(state == &gameMenu){
+    if(gameState == &gameMenu){
         // enter HS Table
         if(button & (1 << PK0))
-            state = &gameHSTable;
+            gameState = &gameHSTable;
         // enter User Select
         if(button & (1 << PK1))
-            state = &gamePlayerSelect;
+            gameState = &gamePlayerSelect;
 
-    }else if(state == &gameHSTable){
+    }else if(gameState == &gameHSTable){
         // return to menu
         if(button & (1 << PK1))
-            state = &gameMenu;
+            gameState = &gameMenu;
 
-    }else if(state == &gamePlayerSelect){
+    }else if(gameState == &gamePlayerSelect){
         // start game
-        state = &gameLoop;
+        gameState = &gameLoop;
         s_tick = 0;
         score  = 0;
         // start game tick timer
@@ -133,16 +148,16 @@ void gameUserInput(uint8_t button)
 
         // as player
         switch(button){
-            case (1 << PK0): cur_player = 0; break;
-            case (1 << PK1): cur_player = 1; break;
-            case (1 << PK2): cur_player = 2; break;
-            case (1 << PK3): cur_player = 3; break;
-            case (1 << PK4): cur_player = 4; break;
-            default: TCCR3B = 0; state = &gamePlayerSelect ; break;
+            case (1 << PK0): player = 0; break;
+            case (1 << PK1): player = 1; break;
+            case (1 << PK2): player = 2; break;
+            case (1 << PK3): player = 3; break;
+            case (1 << PK4): player = 4; break;
+            default: TCCR3B = 0; gameState = &gamePlayerSelect ; break;
         }
     }
 
-    state();
+    gameState();
 }
 
 // updates game every 50ms
@@ -157,7 +172,7 @@ ISR(TIMER3_COMPA_vect)
     
     sei();
 
-    state();
+    gameState();
 }
 
 // handle user input

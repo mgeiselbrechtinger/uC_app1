@@ -1,7 +1,6 @@
 #include    <avr/io.h>
 #include    <stdint.h>
 
-#include    "../libsdcard/spi.h"
 #include    "../libsdcard/sdcard.h"
 #include    "../libmp3/mp3.h"
 #include    "../adc/adc.h"

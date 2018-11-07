@@ -6,7 +6,7 @@
 #include <wii_bt.h>
 
 #ifndef WII
-#define WII 4
+#define WII 1
 #endif
 
 #ifndef CONNECTION_STATUS_T

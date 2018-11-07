@@ -3,6 +3,7 @@
 
 // prototypes
 void gameInit(void);
+void gameWiiInit(void);
 void gameMenu(void);
 void gameHSTable(void);
 void gamePlayerSelect(void);
