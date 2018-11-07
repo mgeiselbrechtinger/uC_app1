@@ -36,7 +36,7 @@ error_t halWT41FcUartInit(void (*sndCallback)(), void (*rcvCallback)(uint8_t))
         UBRR3H = 0x0F & (int8_t)(UBRR_VAL >> 8);
         UBRR3L = (int8_t)UBRR_VAL;
         // enable receiver, transmitter and interrupts
-        UCSR3B = (1 << RXEN3) | (1 << TXEN3) | (1 << RXCIE3) | (1 << UDRIE3);
+        UCSR3B = (1 << RXEN3) | (1 << TXEN3) | (1 << RXCIE3);
         // set frame format, 8data, 1stop bit 
         UCSR3C = (1 << UCSZ30) | (1 << UCSZ31);
     }
@@ -64,7 +64,6 @@ error_t halWT41FcUartInit(void (*sndCallback)(), void (*rcvCallback)(uint8_t))
     // add callback functions
     _sndCallback = sndCallback;
     _rcvCallback = rcvCallback;
-
     return SUCCESS;
 }
 
@@ -95,8 +94,8 @@ error_t halWT41FcUartSend(uint8_t byte)
     // send possible
     snd_flag = 0;   
     UDR3 = byte;
-    // enable transmitt interrupt
-    UCSR3B |= (1 << TXCIE3);
+    // enable empty interrupt
+    UCSR3B |= (1 << UDRIE3);
 
     return SUCCESS;
 }
@@ -115,15 +114,6 @@ ISR(TIMER1_COMPA_vect)
     // check for buffered msg
     if(snd_flag == 1)
         halWT41FcUartSend(sndBuff);
-}
-
-// UART transmitt interrupt
-ISR(USART3_TX_vect)
-{
-    // dissable transmitt interrupt 
-    UCSR3B &= ~(1 << TXCIE3);
-    sei();
-    _sndCallback();
 }
 
 // UART receive interrupt
@@ -198,5 +188,8 @@ ISR(USART3_UDRE_vect)
     // dissable reg empty interrupt
     UCSR3B &= ~(1 << UDRIE3);
     sei();
-    halWT41FcUartSend(sndBuff);
+	if(snd_flag == 1)
+    	halWT41FcUartSend(sndBuff);
+	else
+		_sndCallback();
 }
