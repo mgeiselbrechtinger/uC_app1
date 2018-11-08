@@ -41,9 +41,17 @@ uint8_t spiReceive(void)
 
 void spiSetPrescaler(spi_prescaler_t prescaler)
 {
-
-    if(prescaler == SPI_PRESCALER_128)
-        SPCR |= (1 << SPR0) | (1 << SPR1);
-    else // SPI_PRESCALER_4
-        SPCR &= ~((1 << SPR0) | (1 << SPR1));
+	switch(prescaler){
+		
+		case SPI_PRESCALER_4: 
+        	SPCR &= ~((1 << SPR0) | (1 << SPR1));
+			break;
+		
+		case SPI_PRESCALER_128:
+        	SPCR |= (1 << SPR0) | (1 << SPR1);
+			break;
+		
+		default:
+			break;
+	}
 }
