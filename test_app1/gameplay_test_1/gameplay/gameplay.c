@@ -11,16 +11,13 @@
 #include    "../libglcd/glcd.h"
 #include    "../font/Standard5x7.h"
 
+#define XSTART	(1)
+#define	YSTART	(10)
+#define YLINE	(10)
 
-
-// string constants
-// max 20 character/line
-const char * const user_txt1 PROGMEM  = "Select player K0-4";
-const char * const user_txt2 PROGMEM  = "K0 for menu";
-const char * const menu_txt1 PROGMEM = "K0 for Highscores";
-const char * const menu_txt2 PROGMEM = "K1 to select Player";
-const char * const hs_txt1 PROGMEM   = "K1 for menu";
-
+// wii data
+volatile uint16_t wii_buttons;
+volatile uint16_t wii_accel_x, wii_accel_y, wii_accel_z;
 
 // function pointer
 typedef void (*state_fn)(void);
@@ -31,9 +28,24 @@ static volatile uint16_t score;
 static volatile uint8_t player;
 static volatile uint16_t highscore[] = {0, 0, 0, 0, 0};
 
+void wii_rcv_button(uint8_t wii, uint16_t buttonStates)
+{
+	wii_buttons |= buttonStates;
+}
+
+void wii_rcv_accel(uint8_t wii, uint16_t x, uint16_t y, uint16_t z)
+{
+	wii_accel_x = x;
+	wii_accel_y = y;
+	wii_accel_z = z;
+}
+
 
 void gameInit(void)
-{
+{	
+	// TODO debug
+	PORTH = 0;
+	DDRH = 0xff;
     // user input port
     PORTK |= (1 << PK0) | (1 << PK1) | (1 << PK2) | (1 << PK3) | (1<< PK4);
     DDRK  &= ~((1 << PK0) | (1 << PK1) | (1 << PK2) | (1 << PK3) | (1<< PK4));
@@ -57,17 +69,27 @@ void gameWiiInit(void)
     // TODO: setup wii callbacks
     // TODO: call wii connect
     // print info to press sync button
+    uint8_t i;
+	xy_point p = { .x = XSTART, .y = YSTART };
+
+	glcdFillScreen(GLCD_CLEAR);
+	for(i = 0; i < WII_INIT_TABLE_LEN; i++){
+		glcdDrawTextPgm(wii_init_table[i], p, &Standard5x7, &glcdSetPixel);
+		p.y += YLINE;
+	}
 }
 
 void gameMenu(void)
 {
     // print menu to glcd
-    glcdFillScreen(GLCD_CLEAR);
-    xy_point p  = { .x = 1, .y = 0 };
-    glcdDrawText(menu_txt1, p, &Standard5x7, &glcdSetPixel);
-    p.x = 1;
-    p.y = 40;
-    glcdDrawText(menu_txt2, p, &Standard5x7, &glcdSetPixel);
+    uint8_t i;
+	xy_point p = { .x = XSTART, .y = YSTART };
+    
+	glcdFillScreen(GLCD_CLEAR);
+	for(i = 0; i < MENU_TABLE_LEN; i++){
+    	glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
+		p.y += YLINE;
+	}
 }
 
 void gameHSTable(void)
@@ -75,15 +97,16 @@ void gameHSTable(void)
     char txt_buff[15];
     char int_buff[6];
     uint8_t i;
-    xy_point p = {.x = 1, .y = 0};
+    xy_point p = { .x = XSTART, .y = YSTART };
 
     glcdFillScreen(GLCD_CLEAR);
-    for(i = 0; i <= 4; i++){
+    for(i = 0; i < (HS_TABLE_LEN -1); i++){
+		// append higscore to text
         sprintf(int_buff, "%d", highscore[i]);
         strcpy_P(txt_buff, (PGM_P)pgm_read_word(&(hs_table[i])));
         strcat(txt_buff, int_buff);
         glcdDrawText(txt_buff, p, &Standard5x7, &glcdSetPixel);
-        p.y += 10;
+        p.y += YLINE;
     }
     glcdDrawTextPgm(hs_table[i], p, &Standard5x7, &glcdSetPixel);
 }
@@ -91,13 +114,19 @@ void gameHSTable(void)
 void gamePlayerSelect(void)
 {
     // print text to glcd
+    uint8_t i;
+    xy_point p  = { .x = XSTART, .y = YSTART };
+
     glcdFillScreen(GLCD_CLEAR);
-    xy_point p  = {.x = 1, .y = 20};
-    glcdDrawText(user_txt1, p, &Standard5x7, &glcdSetPixel);
+	for(i = 0; i < USER_SELECT_TABLE_LEN; i++){
+    	glcdDrawTextPgm(user_select_table[i], p, &Standard5x7, &glcdSetPixel);
+		p.y += YLINE;
+	}
 }
     
 void gameLoop(void)
 {
+	glcdFillScreen(GLCD_CLEAR);
     // TODO: implement game play
     //
     // read accelerometer 
@@ -146,6 +175,7 @@ void gameUserInput(uint8_t button)
         TCNT3  = 0;
         TCCR3B = (1 << WGM32) | (1 << CS32);
 
+		PORTH &= 4;
         // as player
         switch(button){
             case (1 << PK0): player = 0; break;
@@ -153,7 +183,7 @@ void gameUserInput(uint8_t button)
             case (1 << PK2): player = 2; break;
             case (1 << PK3): player = 3; break;
             case (1 << PK4): player = 4; break;
-            default: TCCR3B = 0; gameState = &gamePlayerSelect ; break;
+            default: PORTH |= 4; TCCR3B = 0; gameState = &gamePlayerSelect ; break;
         }
     }
 
@@ -163,9 +193,11 @@ void gameUserInput(uint8_t button)
 // updates game every 50ms
 ISR(TIMER3_COMPA_vect)
 {
+	PORTH |= 1;
     s_tick += 1;
     // a second passed
     if(s_tick == 19){
+		PORTH |= 2;
         s_tick = 0;
         score += 1;
     }

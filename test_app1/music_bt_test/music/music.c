@@ -28,9 +28,10 @@ void music_init(void)
 
 	spiInit();
 	PORTL = 0x01;
-	if(sdcardInit() == SUCCESS)
-		PORTL = 0xff;
+	while(sdcardInit() != SUCCESS){
+	}
 
+	PORTL = 0x02;
 	sd_read_address = MUSIC_START;
 
 	mp3Init(&mp3_callback);
