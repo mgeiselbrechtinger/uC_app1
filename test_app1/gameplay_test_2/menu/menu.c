@@ -95,20 +95,22 @@ void wii_init_fn(M_STATE *m_state)
 
 		if(wii_conn_flag == 0){
 			status = wiiUserConnect(wii_nr, wii_mac, &wii_conn_callback);
-			if(status == SUCCESS)
+			//if(status == SUCCESS)
 				wii_conn_flag = 1;
 
 		}else{
 			if(wii_conn_status == CONNECTED)
 				wii_init_state = I_CONNECTED;	
 		}
-	}else if(wii_init_state == I_CONNECTED){
-		
-		if(wii_init_state == I_CONNECTED)
-			(*m_state) = M_HOME;
-		else
-			wii_init_state = I_DISCONNECTED;
 
+	}else if(wii_init_state == I_CONNECTED){
+		// TODO: doesnt reach this point ie. no connection
+		if(wii_conn_status == CONNECTED){
+			wii_conn_flag = 1;
+			(*m_state) = M_HOME;
+		}else{
+			wii_init_state = I_DISCONNECTED;
+		}
 	}
 
 }
@@ -250,13 +252,13 @@ void game_loop_fn(M_STATE *m_state)
 
 void wii_conn_callback(uint8_t wii, connection_status_t status)
 {
-	/* allow connection tries again */
-	wii_conn_flag = 0;
 	/* set connection status */
 	wii_conn_status = status;
 	
-	if(status == DISCONNECTED)
+	if(status == DISCONNECTED){
+		wii_conn_flag = 0;
 		menu_state = M_WII_INIT;
+	}
 }
 
 void wii_rcv_button(uint8_t wii, uint16_t buttonStates)

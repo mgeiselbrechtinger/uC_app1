@@ -15,6 +15,9 @@ int main(void)
     TCCR3A = 0;
     TCCR3B = (1 << WGM32) | (1 << CS32);
 	
+	PORTK = 0;
+	DDRK = 0xff;
+	PORTK |= 1;
 	sei();
 	
 	for(;;){
