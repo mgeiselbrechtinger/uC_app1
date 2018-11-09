@@ -4,7 +4,7 @@ LD := $(CC)
 AVRPROG2 := avrprog2
 
 CFLAGS   := -mmcu=atmega1280
-CCFLAGS  := -std=gnu99 -Wall -Wno-main -O2 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+CCFLAGS  := -std=gnu99 -Wall -fpack-struct -fshort-enums -Wno-main -O2 -funsigned-char -funsigned-bitfields 
 CPPFLAGS := -I. -I./libsdcard -I./libmp3 -I./music -I./adc -I./rand
 LDFLAGS  := -L. -L./libmp3 -L./libsdcard
 

@@ -4,6 +4,7 @@
 #include    <stdint.h>
 
 #include	"./adc.h"
+#include	"../music/music.h"
 #include	"../rand/rand.h"
 
 #define ADCDIF  ((1 << REFS0) | (1 << MUX0) | (1 << MUX1) | (1 << MUX2) | (1 << MUX3))
@@ -48,17 +49,22 @@ ISR(ADC_vect)
     
     // conversion was ADCDIF
     if((ADMUX & (1 << MUX0))){
-        
-        rand_shift((uint8_t)adc_data);
-
         ADMUX = ADCVOL;
+		
+		sei();
+
+        rand_shift((uint8_t)adc_data);
 
     // conversion was ADCVOL
     }else{
         
-        adc_vol = adc_data;
-
         ADMUX = ADCDIF;
+		
+		sei();
+
+		if(music_vol_flag == 1)
+        	music_set_volume((adc_data >> 2));
+
     }
 
 }

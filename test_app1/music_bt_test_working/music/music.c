@@ -4,47 +4,56 @@
 #include    "../libsdcard/sdcard.h"
 #include	"../libsdcard/spi.h"
 #include    "../libmp3/mp3.h"
-#include    "../adc/adc.h"
 
 #define GAGA_START	(7270240)
 #define GAGA_END	(GAGA_START + 860256)
 #define MUSIC_START (5052096)
 #define MUSIC_END   (MUSIC_START + 132336)
 
+uint8_t music_vol_flag;
+
 static bool mp3_req_flag;
 static sdcard_block_t music_buffer;
 static uint32_t sd_read_address;
-static uint8_t mp3_vol;
 
-void mp3_callback(void)
+void music_set_volume(uint8_t linear_data)
+{
+	uint8_t log_data;
+
+	/* approximate log with 1 - (1 - x)^4 for x in [0,1] */
+	log_data = 0xff - linear_data;
+	log_data = (log_data * log_data) >> 8;
+	log_data = (log_data * log_data) >> 8;
+	log_data = 0xff - log_data;
+	
+	mp3SetVolume(log_data);
+}
+
+void music_mp3_callback(void)
 {
     mp3_req_flag = false;
 }
 
 void music_init(void)
 {
-	PORTL = 0;
-	DDRL = 0xff;
-
 	spiInit();
-	PORTL = 0x01;
 	while(sdcardInit() != SUCCESS){
 	}
 
-	PORTL = 0x02;
 	sd_read_address = MUSIC_START;
 
-	mp3Init(&mp3_callback);
+	mp3Init(&music_mp3_callback);
 	
-	mp3_vol = 0xff;
-	mp3SetVolume(mp3_vol);
+	music_vol_flag = 1;
 }
 
 void music_bt(void) 
 {
     error_t status;
 	
-    while((mp3_req_flag = mp3Busy()) == false){
+    while(mp3_req_flag == false){
+		
+		music_vol_flag = 0;
 
         status = sdcardReadBlock(sd_read_address, music_buffer);
         if(status == SUCCESS){
@@ -55,11 +64,11 @@ void music_bt(void)
 
             mp3SendMusic(music_buffer);        
         }
+	
+		mp3_req_flag = mp3Busy();
+		music_vol_flag = 1;
 
-        // if(mp3_vol != adc_vol){
-        //     mp3_vol = adc_vol;
-        //     mp3SetVolume(mp3_vol);
-        // }
     }
+
 }
 

@@ -10,8 +10,9 @@
 
 int main (void)
 {
-	sei();
+	adcInit();
 	music_init();
+	sei();
     for(;;){
 		music_bt();
     }
