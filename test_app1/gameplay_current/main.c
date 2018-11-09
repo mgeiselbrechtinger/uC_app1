@@ -5,19 +5,24 @@
 #include	"./menu/menu.h"
 #include	"./libglcd/glcd.h"
 
-int main(void)
+static void game_tick_init(void)
 {
-	glcdInit();	
-    // setup game tick timer3
+    /* setup TIMER3: 20Hz game ticks */
     TIMSK3 |= (1 << OCIE3A);
     TCNT3 = 0;
     OCR3A = 3125;
     TCCR3A = 0;
     TCCR3B = (1 << WGM32) | (1 << CS32);
-	
+}
+
+int main(void)
+{
+	// TODO debug
 	PORTK = 0;
 	DDRK = 0xff;
-	PORTK |= 1;
+
+	glcdInit();	
+	game_tick_init();
 	sei();
 	
 	for(;;){

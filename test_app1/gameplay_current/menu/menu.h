@@ -39,13 +39,13 @@ void player_select_fn(M_STATE *m_state);
 void game_loop_fn(M_STATE *m_state);
 
 /* wii constants */
-/* first (low) byte of button */
+/* first (high) byte of button */
 #define ARROW_DOWN	(0x04)
 #define	ARROW_UP	(0x08)
 #define ARROW_LEFT	(0x01)
 #define	ARROW_RIGHT	(0x02)
 #define	BUTTON_PLUS	(0x10)
-/* second (high) byte of button */
+/* second (low) byte of button */
 #define	BUTTON_1	(0x02)
 #define BUTTON_2	(0x01)
 #define	BUTTON_A	(0x08)

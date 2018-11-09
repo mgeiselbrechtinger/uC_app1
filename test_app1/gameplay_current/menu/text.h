@@ -3,7 +3,7 @@
 
 #include    <avr/pgmspace.h>
 
-#define XSTART	(1)
+#define XSTART	(3)
 #define	YSTART	(10)
 #define YLINE	(10)
 
@@ -18,23 +18,35 @@ PGM_P const wii_init_table[] PROGMEM =
 	connect_txt
 };
 
-#define MENU_TABLE_LEN	(2)
+#define MENU_TABLE_LEN	(3)
 const char  menu_hs_txt[] PROGMEM = "HS Table: 1";
 const char  menu_sel_txt[] PROGMEM = "Select Player: 2";
+const char  menu_title_txt[] PROGMEM = "FALLING DOWN BALL";
 
 PGM_P const menu_table[] PROGMEM =
 {
+	menu_title_txt,
     menu_hs_txt,
     menu_sel_txt
 };
 
-#define USER_SELECT_TABLE_LEN (2)
+#define USER_NAME_LEN (9*6)
+#define USER_SELECT_TABLE_LEN (6)
+const char  sel0_txt[] PROGMEM = "Player 0";
+const char  sel1_txt[] PROGMEM = "Player 1";
+const char  sel2_txt[] PROGMEM = "Player 2";
+const char  sel3_txt[] PROGMEM = "Player 3";
+const char  sel4_txt[] PROGMEM = "Player 4";
 const char  ret_txt[] PROGMEM = "Return: B";
 const char  usr_txt[] PROGMEM = "Select User: Arrows";
 
 PGM_P const user_select_table[] PROGMEM =
 {
-    usr_txt,
+	sel0_txt,
+	sel1_txt,
+	sel2_txt,
+	sel3_txt,
+	sel4_txt,
     ret_txt
 };
 
