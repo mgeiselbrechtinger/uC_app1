@@ -3,9 +3,14 @@
 
 #include    <avr/pgmspace.h>
 
-#define XSTART	(3)
-#define	YSTART	(10)
-#define YLINE	(10)
+#define XSTART          (0)
+#define XEND            (127)
+#define XMID            (XEND/2)
+#define YSTART          (63)
+#define YEND            (0)
+#define XSTART_TXT	(3)
+#define	YSTART_TXT	(10)
+#define YLINE_TXT	(10)
 
 
 #define WII_INIT_TABLE_LEN (2)
@@ -14,8 +19,8 @@ const char connect_txt[] PROGMEM = "connecting...";
 
 PGM_P const wii_init_table[] PROGMEM = 
 {
-	sync_txt,
-	connect_txt
+    sync_txt,
+    connect_txt
 };
 
 #define MENU_TABLE_LEN	(3)
@@ -25,7 +30,7 @@ const char  menu_title_txt[] PROGMEM = "FALLING DOWN BALL";
 
 PGM_P const menu_table[] PROGMEM =
 {
-	menu_title_txt,
+    menu_title_txt,
     menu_hs_txt,
     menu_sel_txt
 };
@@ -42,11 +47,11 @@ const char  usr_txt[] PROGMEM = "Select User: Arrows";
 
 PGM_P const user_select_table[] PROGMEM =
 {
-	sel0_txt,
-	sel1_txt,
-	sel2_txt,
-	sel3_txt,
-	sel4_txt,
+    sel0_txt,
+    sel1_txt,
+    sel2_txt,
+    sel3_txt,
+    sel4_txt,
     ret_txt
 };
 
@@ -66,5 +71,19 @@ PGM_P const hs_table[] PROGMEM =
     hs4_txt,
     ret_txt
 };
+
+/* game platforms */
+/* game platform number has to be power of 2 */
+#define GAME_PLATFORM_NR (4) 
+/* game platform coords has to be multiple of 2 */
+#define GAME_PLATFORM_COORDS (6)
+/* three platforms per line with at least 6 pixel gaps = 6 x-coords out of [0,127] */
+const uint8_t game_platforms[GAME_PLATFORM_NR][GAME_PLATFORM_COORDS] = { 
+    {0, 5, 15, 97, 110, 127},
+    {8, 44, 52, 100, 108, 127},
+    {0, 66, 75, 111, 118, 120}, 
+    {0, 20, 29, 88, 110, 127} 
+};
+
 
 #endif

@@ -17,21 +17,21 @@ static void game_tick_init(void)
 
 int main(void)
 {
-	// TODO debug
-	PORTK = 0;
-	DDRK = 0xff;
+    // TODO debug
+    PORTK = 0;
+    DDRK = 0xff;
 
-	glcdInit();	
-	game_tick_init();
-	sei();
-	
-	for(;;){
-		
-	}
+    glcdInit();	
+    game_tick_init();
+    sei();
+
+    for(;;){
+
+    }
 }
 
 ISR(TIMER3_COMPA_vect)
 {
-	sei();
-	menu_fn();
+    sei();
+    menu_fn();
 }
