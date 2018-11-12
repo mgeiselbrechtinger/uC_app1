@@ -5,6 +5,7 @@
 
 #include    "./menu.h"
 #include    "./text.h"
+#include	"../rand/rand.h"
 #include    "../libwiimote/wii_user.h"
 #include    "../libglcd/glcd.h"
 #include    "../font/Standard5x7.h"
@@ -18,7 +19,7 @@ static I_STATE game_loop_state	    = I_INIT;
 
 /* wii_init_fn globals */
 static const uint8_t wii_nr = 1;
-static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0xba, 0xa1, 0x32 };
+static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0x4b, 0xf6, 0x80 };
 static uint8_t wii_button_h, wii_button_l;
 static uint16_t wii_accel_x, wii_accel_y, wii_accel_z;
 static connection_status_t wii_conn_status;
@@ -258,11 +259,11 @@ void player_select_fn(M_STATE *m_state)
         /* check wii buttons */
         switch(wii_button_l & (BUTTON_A | BUTTON_B)){
 
-            case BUTTON_A: hs_table_state = I_INIT;
+            case BUTTON_A: player_select_state = I_INIT;
                            (*m_state) = M_GAME_LOOP;
                            break;
 
-            case BUTTON_B: hs_table_state = I_INIT;
+            case BUTTON_B: player_select_state = I_INIT;
                            (*m_state) = M_HOME;
                            break;
 
@@ -287,9 +288,9 @@ void game_loop_fn(M_STATE *m_state)
         game_score = 0;
         game_ball.x = XMID - 1;
         game_ball.y = YSTART;
-        game_yshift = glcdGetYShift() - 1;
+        game_yshift = glcdGetYShift();
 
-        game_draw_ball(game_ball, &glcdSetPixel);
+        // game_draw_ball(game_ball, &glcdSetPixel);
 
         // TODO: Init game play
 
@@ -303,11 +304,16 @@ void game_loop_fn(M_STATE *m_state)
             game_score++;
         }
 
-        // TODO: call gameplay function
-        if(game_score == 5)
+        /* manage gameplay */
+        game_play();
+        
+        /* abort game with home button */
+        if(wii_button_l == BUTTON_HOME)
             game_loop_state = I_GAME_OVER;
 
-    }else if(game_loop_state == I_GAME_OVER){
+    	wii_button_l = 0;
+	
+	}else if(game_loop_state == I_GAME_OVER){
         /* set highscore entry */
         if(game_score > game_highscore[game_player])
             game_highscore[game_player] = game_score;
@@ -321,23 +327,29 @@ void game_loop_fn(M_STATE *m_state)
 void game_play(void)
 {
     /* remove ball */
-    game_draw_ball(game_ball, &glcdClearPixel);
+    // game_draw_ball(game_ball, &glcdClearPixel);
     /* set x-coord of ball: user input */
 
     /* set y-coord of ball: gravity */
-
-
-    /* every 250ms shift game field */
+    
+	/* every 250ms shift game field */
     if(game_sec_tick == 4){
         game_platform_delay++;
+
+		game_draw_random_platform(0);
         /* shift field one up */
         glcdSetYShift(game_yshift);
-        glcdDrawHorizontal(YSTART, &glcdClearPixel);
-    }
-    /* every 15 shifts add new platform */
-    if(game_platform_delay == 14){
-        game_platform_delay = 0;
-        game_draw_random_platform();  
+		
+
+		game_yshift++;
+		/*
+		if(game_platform_delay == 14){
+			game_platform_delay = 0;
+			game_draw_random_platform(0);
+		}else{
+			glcdDrawHorizontal(YSTART, &glcdClearPixel);
+		}
+		*/
     }
 
     /* set y_coord of ball: platform */
@@ -345,24 +357,26 @@ void game_play(void)
     /* check for game over */
 
     /* draw ball */
-    game_draw_ball(game_ball, &glcdSetPixel);
+    // game_draw_ball(game_ball, &glcdSetPixel);
 
 }
 
-void game_draw_random_platform(void)
+uint8_t  game_choose_random_platform(void)
+{
+    /* choose random platform */
+    return (uint8_t)rand16() & (GAME_PLATFORM_NR - 1); 
+}
+
+void game_draw_random_platform(uint8_t rand_platform)
 {
     uint8_t i;
     xy_point p1, p2;
-    uint8_t rand_platform = 0;
-    /* choose random platform */
-    // TODO: include adc
-    // rand_platform = (uint8_t)rand16() & (GAME_PLATFORM_NR - 1); 
 
     for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
         p1.x = game_platforms[rand_platform][i];
-        p1.y = YSTART;
+        p1.y = game_yshift;
         p2.x = game_platforms[rand_platform][i+1];
-        p2.y = YSTART;
+        p2.y = game_yshift;
         glcdDrawLine(p1, p2, &glcdSetPixel);
     }
 

@@ -2,6 +2,8 @@
 #include	<avr/interrupt.h>
 #include	<stdint.h>
 
+#include    "./music/music.h"
+#include	"./adc/adc.h"
 #include	"./menu/menu.h"
 #include	"./libglcd/glcd.h"
 
@@ -21,12 +23,14 @@ int main(void)
     PORTK = 0;
     DDRK = 0xff;
 
+	adcInit();
+	music_init();
     glcdInit();	
     game_tick_init();
     sei();
 
     for(;;){
-
+		// music_bt();
     }
 }
 

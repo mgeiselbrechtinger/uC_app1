@@ -41,7 +41,9 @@ void game_loop_fn(M_STATE *m_state);
 
 void game_play(void);
 
-void game_draw_random_platform(void);
+uint8_t game_choose_random_platform(void);
+
+void game_draw_random_platform(uint8_t random_platform);
 
 void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uint8_t));
 
