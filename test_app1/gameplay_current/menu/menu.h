@@ -43,9 +43,17 @@ void game_play(void);
 
 uint8_t game_choose_random_platform(void);
 
-void game_draw_random_platform(uint8_t random_platform);
+void game_draw_random_platform(uint8_t rand_platform);
+
+void game_log_random_platform(uint8_t rand_platform);
 
 void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uint8_t));
+
+void game_set_ball_x(void);
+
+void game_collision_check(void);
+
+void game_over_check(void);
 
 /* wii constants */
 /* first (high) byte of button */

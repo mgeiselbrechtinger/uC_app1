@@ -10,16 +10,16 @@
 #include    "../libglcd/glcd.h"
 #include    "../font/Standard5x7.h"
 
-static M_STATE menu_state	    = M_WII_INIT;
+static M_STATE menu_state	    	= M_WII_INIT;
 static I_STATE wii_init_state	    = I_INIT;
-static I_STATE home_state	    = I_INIT;
+static I_STATE home_state	    	= I_INIT;
 static I_STATE hs_table_state	    = I_INIT;
 static I_STATE player_select_state  = I_INIT;
 static I_STATE game_loop_state	    = I_INIT;
 
 /* wii_init_fn globals */
 static const uint8_t wii_nr = 1;
-static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0x4b, 0xf6, 0x80 };
+static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0x4b, 0xf8, 0x73 };
 static uint8_t wii_button_h, wii_button_l;
 static uint16_t wii_accel_x, wii_accel_y, wii_accel_z;
 static connection_status_t wii_conn_status;
@@ -36,6 +36,14 @@ static uint16_t game_highscore[5] = {0, 0, 0, 0, 0};
 static uint8_t game_platform_delay;
 static uint8_t game_yshift;
 static xy_point game_ball;
+static uint8_t game_curr_platforms_head;
+static uint8_t game_curr_platforms_tail;
+static uint8_t game_curr_platforms_len;
+typedef struct game_platform_data_t{
+	uint8_t platform_nr;
+	uint8_t y_pos;
+}game_platform_data;
+static game_platform_data game_curr_platforms[8];
 
 void menu_fn(void)
 {
@@ -283,16 +291,15 @@ void game_loop_fn(M_STATE *m_state)
         glcdFillScreen(GLCD_CLEAR);
 
         /* reset game variables */
-        game_platform_delay = 0;
+        game_platform_delay = 13; /* 13 to draw first platfrom imediatly */
+		game_curr_platforms_head = 0;
+		game_curr_platforms_tail = 0;
+		game_curr_platforms_len = 0;
         game_sec_tick = 0;
         game_score = 0;
-        game_ball.x = XMID - 1;
-        game_ball.y = YSTART;
+        game_ball.x = XMID;
+        game_ball.y = YSTART - 1;
         game_yshift = glcdGetYShift();
-
-        // game_draw_ball(game_ball, &glcdSetPixel);
-
-        // TODO: Init game play
 
         game_loop_state = I_PLAY;
 
@@ -317,6 +324,9 @@ void game_loop_fn(M_STATE *m_state)
         /* set highscore entry */
         if(game_score > game_highscore[game_player])
             game_highscore[game_player] = game_score;
+	
+		/* reset Y-shift */
+		glcdSetYShift(YEND);
 
         /* show highscore table */
         game_loop_state = I_INIT;
@@ -327,37 +337,39 @@ void game_loop_fn(M_STATE *m_state)
 void game_play(void)
 {
     /* remove ball */
-    // game_draw_ball(game_ball, &glcdClearPixel);
+    game_draw_ball(game_ball, &glcdClearPixel);
     /* set x-coord of ball: user input */
-
-    /* set y-coord of ball: gravity */
-    
-	/* every 250ms shift game field */
-    if(game_sec_tick == 4){
-        game_platform_delay++;
-
-		game_draw_random_platform(0);
-        /* shift field one up */
-        glcdSetYShift(game_yshift);
-		
-
-		game_yshift++;
-		/*
-		if(game_platform_delay == 14){
-			game_platform_delay = 0;
-			game_draw_random_platform(0);
-		}else{
-			glcdDrawHorizontal(YSTART, &glcdClearPixel);
-		}
-		*/
-    }
-
-    /* set y_coord of ball: platform */
-
+	game_set_ball_x();
+	
+	/* 60Hz shift game field */
+   	if(game_sec_tick == 2){
+   	    game_platform_delay++;
+   		
+   		/* draw bottom line */
+   		if(game_platform_delay == 14){
+   			game_platform_delay = 0;
+			uint8_t rand_platform = game_choose_random_platform();
+			/* draw and log new random platform */
+   			game_draw_random_platform(rand_platform);
+   			game_log_random_platform(rand_platform);
+   		}else{
+   			glcdDrawHorizontal(game_yshift + YSTART, &glcdClearPixel);
+   		}
+   		
+   	    /* shift field one up */
+   	    glcdSetYShift(game_yshift);
+   		
+   		game_yshift++;
+   	}
+	
+    /* set y_coord of ball */
+	// game_collision_check();
+	
     /* check for game over */
-
+	// game_over_check();
+	
     /* draw ball */
-    // game_draw_ball(game_ball, &glcdSetPixel);
+    game_draw_ball(game_ball, &glcdSetPixel);
 
 }
 
@@ -374,12 +386,49 @@ void game_draw_random_platform(uint8_t rand_platform)
 
     for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
         p1.x = game_platforms[rand_platform][i];
-        p1.y = game_yshift;
+        p1.y = game_yshift + YSTART;
         p2.x = game_platforms[rand_platform][i+1];
-        p2.y = game_yshift;
+        p2.y = game_yshift + YSTART;
         glcdDrawLine(p1, p2, &glcdSetPixel);
     }
 
+}
+
+void game_log_random_platform(uint8_t rand_platform)
+{
+	game_platform_data platform_data;
+	platform_data.platform_nr = rand_platform;
+	platform_data.y_pos = game_yshift;
+	
+	game_curr_platforms[game_curr_platforms_head] = platform_data;
+	game_curr_platforms_head = (game_curr_platforms_head + 1) & 7;
+	game_curr_platforms_len++;
+}
+
+void game_collision_check(void)
+{
+	uint8_t i = game_curr_platforms_tail;
+	game_platform_data platform_data;
+
+	for(; i != game_curr_platforms_head; i = (i + 1) & 7){
+		platform_data = game_curr_platforms[i];
+
+		/* delete entry if platform is above of ball */
+		if(platform_data.y_pos <= game_ball.y){
+			game_curr_platforms_tail = (game_curr_platforms_tail + 1) & 7;
+			game_curr_platforms_len--;
+		
+		/* check if ball is above hole in platform */
+		}else if(platform_data.y_pos == (game_ball.y + 1)){
+			// TODO: loop over x coords of platform and check if ball can pass
+			
+		}		
+	}
+}
+
+void game_over_check(void)
+{
+	// TODO: check if ball hit top 
 }
 
 /**
@@ -397,7 +446,7 @@ void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uin
     right.x = lower_left.x + 4;
     right.y = lower_left.y;
 
-    if(lower_left.y <= YEND)
+    //if(lower_left.y <= YEND)
         glcdDrawLine(lower_left, right, drawPx);
 
     lower_left.x--;
@@ -405,13 +454,13 @@ void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uin
     right.x++;
     right.y--;
 
-    if(lower_left.y <= YEND)
+    //if(lower_left.y <= YEND)
         glcdDrawLine(lower_left, right, drawPx);
 
     lower_left.y--;
     right.y--;
 
-    if(lower_left.y <= YEND)
+    //if(lower_left.y <= YEND)
         glcdDrawLine(lower_left, right, drawPx);
 
     lower_left.x++;
@@ -419,9 +468,28 @@ void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uin
     right.x--;
     right.y--;
 
-    if(lower_left.y <= YEND)
+    //if(lower_left.y <= YEND)
         glcdDrawLine(lower_left, right, drawPx);
   
+}
+
+// TODO: use accelerometer 
+void game_set_ball_x(void)
+{
+    /* check wii arrows */
+    switch(wii_button_h & (ARROW_LEFT | ARROW_RIGHT)){
+
+        case ARROW_LEFT: if(game_ball.x > XSTART)
+                        	game_ball.x--;
+                         break;
+
+        case ARROW_RIGHT: if(game_ball.x < XEND)
+						  	game_ball.x++;
+                          break;
+
+        default:		break;	
+    }
+	wii_button_h = 0;
 }
 
 void wii_conn_callback(uint8_t wii, connection_status_t status)

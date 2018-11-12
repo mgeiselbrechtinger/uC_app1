@@ -3,11 +3,11 @@
 
 #include    <avr/pgmspace.h>
 
-#define XSTART          (0)
-#define XEND            (127)
-#define XMID            (XEND/2)
-#define YSTART          (63)
-#define YEND            (0)
+#define XSTART      (1)
+#define XEND       	(122)
+#define XMID        (XEND/2)
+#define YSTART      (63)
+#define YEND        (0)
 #define XSTART_TXT	(3)
 #define	YSTART_TXT	(10)
 #define YLINE_TXT	(10)
