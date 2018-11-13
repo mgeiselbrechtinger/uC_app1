@@ -3,15 +3,50 @@
 
 #include    <avr/pgmspace.h>
 
+/* glcd position constants */
 #define XSTART      (1)
-#define XEND       	(122)
+#define XEND        (122)
 #define XMID        (XEND/2)
 #define YSTART      (63)
 #define YEND        (0)
-#define XSTART_TXT	(3)
-#define	YSTART_TXT	(10)
-#define YLINE_TXT	(10)
+#define XSTART_TXT  (3)
+#define	YSTART_TXT  (10)
+#define YLINE_TXT   (10)
 
+/* wii constants */
+/* first (high) byte of button */
+#define ARROW_DOWN	(0x04)
+#define	ARROW_UP	(0x08)
+#define ARROW_LEFT	(0x01)
+#define	ARROW_RIGHT	(0x02)
+#define	BUTTON_PLUS	(0x10)
+/* second (low) byte of button */
+#define	BUTTON_1	(0x02)
+#define BUTTON_2	(0x01)
+#define	BUTTON_A	(0x08)
+#define	BUTTON_B	(0x04)
+#define	BUTTON_MINUS (0x10)
+#define BUTTON_HOME	(0x80)
+
+/* menu state types */
+typedef enum{
+    M_WII_INIT,
+    M_HOME,
+    M_HS_TABLE,
+    M_PLAYER_SELECT,
+    M_GAME_LOOP,
+} M_STATE;
+
+/* intern state types */
+typedef enum{
+    I_INIT,
+    I_DISCONNECTED,
+    I_CONNECTED,
+    I_SELECT,
+    I_PLAY,
+    I_GAME_OVER,
+    I_IDLE,
+} I_STATE;
 
 #define WII_INIT_TABLE_LEN (2)
 const char sync_txt[] PROGMEM = "Please press sync!";
@@ -78,7 +113,7 @@ PGM_P const hs_table[] PROGMEM =
 /* game platform coords has to be multiple of 2 */
 #define GAME_PLATFORM_COORDS (6)
 /* three platforms per line with at least 6 pixel gaps = 6 x-coords out of [0,127] */
-const uint8_t game_platforms[GAME_PLATFORM_NR][GAME_PLATFORM_COORDS] = { 
+const uint8_t game_platform_templates[GAME_PLATFORM_NR][GAME_PLATFORM_COORDS] = { 
     {0, 5, 15, 97, 110, 127},
     {8, 44, 52, 100, 108, 127},
     {0, 66, 75, 111, 118, 120}, 
