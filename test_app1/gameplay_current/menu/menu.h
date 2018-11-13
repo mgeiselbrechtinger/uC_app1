@@ -39,6 +39,8 @@ void player_select_fn(M_STATE *m_state);
 
 void game_loop_fn(M_STATE *m_state);
 
+void game_ticks(void);
+
 void game_play(void);
 
 uint8_t game_choose_random_platform(void);
