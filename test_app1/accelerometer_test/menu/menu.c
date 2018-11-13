@@ -19,7 +19,7 @@ static I_STATE game_loop_state	    = I_INIT;
 
 /* wii_init_fn globals */
 static const uint8_t wii_nr = 1;
-static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0x4b, 0xf8, 0x73 };
+static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0x4b, 0xf6, 0x80 };
 static uint8_t wii_button_h, wii_button_l;
 static uint8_t wii_accel_x, wii_accel_y, wii_accel_z;
 static connection_status_t wii_conn_status;
@@ -138,41 +138,24 @@ void home_fn(M_STATE *m_state)
 {
     if(home_state == I_INIT){
 
-        uint8_t i;
-        xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
-
-        glcdFillScreen(GLCD_CLEAR);
-        /* print title */
-        i = 0;
-        p.x += 13; 
-        glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
-        p.x = XSTART_TXT;
-        p.y += 3*YLINE_TXT;
-        /* print menu */
-        for(i = 1; i < MENU_TABLE_LEN; i++){
-            glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
-            p.y += YLINE_TXT;
-        }
+		PORTE = 0x00;
+		DDRE  = 0xff;
+		PORTF = 0x00;
+		DDRF  = 0xff;
+		PORTH = 0x00;
+		DDRH  = 0xff;
+		
+		wiiUserSetAccel(wii_nr, 1, 0);
 
         home_state = I_IDLE;
-        wii_button_l = 0;
 
     }else if(home_state == I_IDLE){
+		
+		/* set led according to accelerometer data */
+		PORTE = wii_accel_x;
+		PORTF = wii_accel_y;
+		PORTH = wii_accel_z;
 
-        switch(wii_button_l & (BUTTON_1 | BUTTON_2)){
-
-            case BUTTON_1:	home_state = I_INIT;
-                                (*m_state) = M_HS_TABLE;
-                                break;
-
-            case BUTTON_2:	home_state = I_INIT;
-                                (*m_state) = M_PLAYER_SELECT;
-                                break;
-
-            default:		break;
-        }
-
-        wii_button_l = 0;
     }
 }
 

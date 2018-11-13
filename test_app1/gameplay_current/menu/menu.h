@@ -51,6 +51,8 @@ void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uin
 
 void game_set_ball_x(void);
 
+int8_t game_platform_under_ball(void);
+
 void game_collision_check(void);
 
 void game_over_check(void);
