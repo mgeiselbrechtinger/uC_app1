@@ -138,12 +138,12 @@ void home_fn(M_STATE *m_state)
 {
     if(home_state == I_INIT){
 
-		PORTE = 0x00;
-		DDRE  = 0xff;
-		PORTF = 0x00;
-		DDRF  = 0xff;
-		PORTH = 0x00;
-		DDRH  = 0xff;
+		// PORTE = 0x00;
+		// DDRE  = 0xff;
+		// PORTF = 0x00;
+		// DDRF  = 0xff;
+		// PORTH = 0x00;
+		// DDRH  = 0xff;
 		
 		wiiUserSetAccel(wii_nr, 1, 0);
 
@@ -152,9 +152,9 @@ void home_fn(M_STATE *m_state)
     }else if(home_state == I_IDLE){
 		
 		/* set led according to accelerometer data */
-		PORTE = wii_accel_x;
-		PORTF = wii_accel_y;
-		PORTH = wii_accel_z;
+		PORTK = wii_accel_x;
+		// PORTF = wii_accel_y;
+		// PORTH = wii_accel_z;
 
     }
 }
