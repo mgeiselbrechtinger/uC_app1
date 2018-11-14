@@ -10,7 +10,12 @@
 #include    "../libglcd/glcd.h"
 #include    "../font/Standard5x7.h"
 
-/* state globals */
+  //////////////////////
+ /* global variables */
+//////////////////////
+
+// TODO use init function
+/* state data */
 static M_STATE menu_state	    = M_WII_INIT;
 static I_STATE wii_init_state	    = I_INIT;
 static I_STATE home_state	    = I_INIT;
@@ -18,7 +23,7 @@ static I_STATE hs_table_state	    = I_INIT;
 static I_STATE player_select_state  = I_INIT;
 static I_STATE game_loop_state	    = I_INIT;
 
-/* wii  globals */
+/* wiimote data */
 typedef struct {
     uint8_t conn_flag; 
     connection_status_t conn_status;
@@ -27,29 +32,34 @@ typedef struct {
 } wii_data_t;
 static wii_data_t wii_data;
 
-/* player select globals */
+/* player data */
 typedef struct{
     xy_point p1, p2;
 } player_select_t;
 static player_select_t player_select;
 
-/* gameplay globals */
+static uint8_t game_player;
+
+/* score data */
 typedef struct{
     uint8_t tick;
     uint16_t value, threshold;
 } game_score_t;
 static game_score_t game_score;
 
+static uint16_t game_highscore[5] = {0, 0, 0, 0, 0};
+
+/* yshift data */
 typedef struct{
     uint8_t value, flag, tick, threshold;
 } game_yshift_t;
 static game_yshift_t game_yshift;
 
+/* platform data */
 typedef struct {
     uint8_t platform_nr;
     uint8_t y_pos;
 }platform_data_t;
-static platform_data_t game_curr_platforms[8];
 
 typedef struct{
     uint8_t delay;
@@ -58,14 +68,17 @@ typedef struct{
 } game_platforms_t;
 static game_platforms_t game_platforms;
 
+/* ball data */
 typedef struct{
     uint8_t left, right;
 } game_collision_t;
 static game_collision_t game_collision;
 
-static uint8_t game_player;
 static xy_point game_ball;
-static uint16_t game_highscore[5] = {0, 0, 0, 0, 0};
+
+  /////////////////////////
+ /* internal prototypes */
+/////////////////////////
 
 /* menu prototypes */
 
@@ -109,7 +122,27 @@ static void wii_rcv_button(uint8_t wii, uint16_t buttonStates);
 
 static void wii_rcv_accel(uint8_t wii, uint16_t x, uint16_t y, uint16_t z);
 
-/* function implementations */
+  //////////////////////////////
+ /* function implementations */
+//////////////////////////////
+
+void menu_init(void)
+{
+    /* setup TIMER3: 20Hz game ticks */
+    TIMSK3 |= (1 << OCIE3A);
+    TCNT3 = 0;
+    OCR3A = 3125;
+    TCCR3A = 0;
+    TCCR3B = (1 << WGM32) | (1 << CS32);
+
+    /* initialize states */
+    menu_state	        = M_WII_INIT;
+    wii_init_state      = I_INIT;
+    home_state	        = I_INIT;
+    hs_table_state      = I_INIT;
+    player_select_state = I_INIT;
+    game_loop_state	= I_INIT;
+}
 
 void menu_fn(void)
 {
@@ -512,7 +545,7 @@ static int8_t game_platform_under_ball(void)
         if(distance < -4){
             game_platforms.tail = (game_platforms.tail + 1) & 7;
 
-            /* platform underneath or besides ball, return */
+            /* platform right below or besides ball, return */
         }else if(distance >= -4 && distance <= 0){
             return +i;
 
@@ -545,7 +578,7 @@ static void game_collision_check(void)
 
     /* platform under ball */
     if(platform_idx != -1){
-        platform_data = game_curr_platforms[platform_idx];
+        platform_data = game_platforms.buff[platform_idx];
 
         /* check all windows of platform */
         for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
@@ -584,14 +617,15 @@ static void game_collision_check(void)
 
 static void game_over_check(void)
 {
-    /* check if ball hit the top */
+    /* check if top of ball hit the top of playing field */
     if((game_ball.y - 3) == (game_yshift.value + YEND))
         game_loop_state = I_GAME_OVER;
 
 }
 
 /**
- * Draws ball  ****
+ * Draws ball, TODO maybe use two fill rect functions
+ *             ****
  *            ******
  *            ******
  *             ****

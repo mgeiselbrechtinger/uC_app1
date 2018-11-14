@@ -23,14 +23,16 @@ int main(void)
     PORTK = 0;
     DDRK = 0xff;
 
-	adcInit();
-	music_init();
+    // TODO use menu_init();
+    adcInit();
+    music_init();
     glcdInit();	
     game_tick_init();
     sei();
 
+    // TODO turn on music and goto sleep
     for(;;){
-		//music_bt();
+        //music_bt();
     }
 }
 
