@@ -22,11 +22,14 @@ int main(void)
     // TODO debug
     PORTK = 0;
     DDRK = 0xff;
+	PORTL = 0;
+	DDRL = 0xff;
 
     // TODO use menu_init();
     adcInit();
-    music_init();
-    glcdInit();	
+    //music_init();
+    glcdInit();
+	menu_init();
     game_tick_init();
     sei();
 

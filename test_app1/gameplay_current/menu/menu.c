@@ -14,14 +14,13 @@
  /* global variables */
 //////////////////////
 
-// TODO use init function
 /* state data */
-static M_STATE menu_state	    = M_WII_INIT;
-static I_STATE wii_init_state	    = I_INIT;
-static I_STATE home_state	    = I_INIT;
-static I_STATE hs_table_state	    = I_INIT;
-static I_STATE player_select_state  = I_INIT;
-static I_STATE game_loop_state	    = I_INIT;
+static M_STATE menu_state;
+static I_STATE wii_init_state;
+static I_STATE home_state;
+static I_STATE hs_table_state;
+static I_STATE player_select_state;
+static I_STATE game_loop_state;
 
 /* wiimote data */
 typedef struct {
@@ -58,6 +57,7 @@ static game_yshift_t game_yshift;
 /* platform data */
 typedef struct {
     uint8_t platform_nr;
+	/* absolute address of platform */
     uint8_t y_pos;
 }platform_data_t;
 
@@ -73,7 +73,7 @@ typedef struct{
     uint8_t left, right;
 } game_collision_t;
 static game_collision_t game_collision;
-
+/* absolute address of ball */
 static xy_point game_ball;
 
   /////////////////////////
@@ -103,6 +103,8 @@ static uint8_t game_choose_random_platform(void);
 static void game_draw_random_platform(uint8_t rand_platform);
 
 static void game_log_random_platform(uint8_t rand_platform);
+
+static void game_platform_log_update(void);
 
 static void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, const uint8_t));
 
@@ -183,7 +185,6 @@ static void wii_init_fn(void)
 {
 
     if(wii_init_state == I_INIT){
-
         error_t status;
         uint8_t i;
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
@@ -206,11 +207,8 @@ static void wii_init_fn(void)
     }else if(wii_init_state == I_DISCONNECTED){
 
         /* try connection to wii */
-        error_t status;
-
         if(wii_data.conn_flag == 0){
-            status = wiiUserConnect(wii_nr, wii_mac, &wii_conn_callback);
-            //if(status == SUCCESS)
+            wiiUserConnect(wii_nr, wii_mac, &wii_conn_callback);
             wii_data.conn_flag = 1;
 
         }else{
@@ -388,15 +386,21 @@ static void game_loop_fn(void)
     if(game_loop_state == I_INIT){
         /* clear screen */
         glcdFillScreen(GLCD_CLEAR);
-
-        /* reset game variables */
+        /* initialize score */
         memset(&game_score, 0, sizeof game_score);
+		game_score.threshold = 30;
+		/* initialize platforms */
         memset(&game_platforms, 0, sizeof game_platforms);
         game_platforms.delay = 13; /* 13 to draw first platfrom imediatly */
+		/* initialize ball */
         game_ball.x = XMID;
-        game_ball.y = YSTART - 30; // TODO: change back to -1
-        memset(&game_yshift, 0, sizeof game_yshift);
-        game_yshift.value = glcdGetYShift();
+        game_ball.y = YSTART - 1; 
+        /* initialize yshift */
+		memset(&game_yshift, 0, sizeof game_yshift);
+		game_yshift.flag = 1;
+		game_yshift.threshold = 6;
+		/* enable accelerometer */
+		wiiUserSetAccel(wii_nr, 1, 0);
 
         game_loop_state = I_PLAY;
 
@@ -445,14 +449,14 @@ static void game_ticks(void)
         game_yshift.tick = 0;
         game_yshift.flag = 1;
     }
-
-    /* enhance difficulty */
+    
+	/* enhance difficulty */
     if(game_score.value == game_score.threshold){
         /* multiply by 2 */
         game_score.threshold <<= 1;
 
-        if(game_yshift.threshold > 1){
-            game_yshift.threshold--;
+        if(game_yshift.threshold > 0){
+            game_yshift.threshold -= 1;
         }
     }
 }
@@ -460,10 +464,12 @@ static void game_ticks(void)
 static void game_play(void)
 {
     /* remove ball */
-    game_draw_ball(game_ball, &glcdClearPixel);
+	xy_point render_ball;
+	render_ball.x = game_ball.x;
+	render_ball.y = (game_ball.y + game_yshift.value) & YMOD;
+    game_draw_ball(render_ball, &glcdClearPixel);
 
-    // TODO change to game_yshift.flag == 0
-    if(game_score.tick == 1){
+    if(game_yshift.flag == 1){
         game_yshift.flag = 0;
         game_platforms.delay++;
 
@@ -477,14 +483,18 @@ static void game_play(void)
 
         }else{
             /* clear line */
-            glcdDrawHorizontal(game_yshift.value + YSTART, &glcdClearPixel);
+            glcdDrawHorizontal((game_yshift.value + YSTART) & YMOD, &glcdClearPixel);
 
         }
 
         /* shift field one up */
         glcdSetYShift(game_yshift.value);
 
-        game_yshift.value++;
+        game_yshift.value = (game_yshift.value + 1) & YMOD;
+
+		/* update absolute y positions */
+		game_ball.y = (game_ball.y - 1) & YMOD;
+		game_platform_log_update();
     }
 
     /* set y_coord of ball and restrict x movement */
@@ -497,7 +507,9 @@ static void game_play(void)
     game_over_check();
 
     /* draw ball */
-    game_draw_ball(game_ball, &glcdSetPixel);
+	render_ball.x = game_ball.x;
+	render_ball.y = (game_ball.y + game_yshift.value) & YMOD;
+    game_draw_ball(render_ball, &glcdSetPixel);
 
 }
 
@@ -514,9 +526,9 @@ static void game_draw_random_platform(uint8_t rand_platform)
 
     for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
         p1.x = game_platform_templates[rand_platform][i];
-        p1.y = game_yshift.value + YSTART;
+        p1.y = (game_yshift.value + YSTART) & YMOD;
         p2.x = game_platform_templates[rand_platform][i+1];
-        p2.y = game_yshift.value + YSTART;
+        p2.y = (game_yshift.value + YSTART) & YMOD;
         glcdDrawLine(p1, p2, &glcdSetPixel);
     }
 
@@ -526,27 +538,38 @@ static void game_log_random_platform(uint8_t rand_platform)
 {
     platform_data_t platform_data;
     platform_data.platform_nr = rand_platform;
-    platform_data.y_pos = game_yshift.value + YSTART;
+    platform_data.y_pos = YSTART;
 
     game_platforms.buff[game_platforms.head] = platform_data;
     game_platforms.head = (game_platforms.head + 1) & 7;
+}
+
+static void game_platform_log_update(void)
+{
+	uint8_t i;
+
+	for(i = game_platforms.tail; i != game_platforms.head; i = (i + 1) & 7){
+		/* decrement every platforms y pos */
+		game_platforms.buff[i].y_pos = (game_platforms.buff[i].y_pos - 1) & YMOD;
+
+	}
 }
 
 static int8_t game_platform_under_ball(void)
 {
     uint8_t i;
     int8_t distance;
-
-    for(i = game_platforms.tail; i != game_platforms.head; i = (i + 1) & 7){
+    
+	for(i = game_platforms.tail; i != game_platforms.head; i = (i + 1) & 7){
         /* calculate distance between ball and platform */
-        distance = game_ball.y - game_platforms.buff[i].y_pos - 1;
+        distance = game_ball.y - game_platforms.buff[i].y_pos;
 
         /* platform above ball, remove from buffer */
-        if(distance < -4){
+        if(distance > 5){
             game_platforms.tail = (game_platforms.tail + 1) & 7;
-
-            /* platform right below or besides ball, return */
-        }else if(distance >= -4 && distance <= 0){
+        
+		/* platform right below or besides ball, return */
+        }else if(distance >= -1 && distance <= 3){
             return +i;
 
         }
@@ -579,16 +602,16 @@ static void game_collision_check(void)
     /* platform under ball */
     if(platform_idx != -1){
         platform_data = game_platforms.buff[platform_idx];
-
-        /* check all windows of platform */
+        
+		/* check all windows of platform */
         for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
             platform_left  = game_platform_templates[platform_data.platform_nr][i];
             platform_right = game_platform_templates[platform_data.platform_nr][i+1];
 
             /* ball not over window, unset gravity */
-            if(ball_right >= platform_left && ball_left <= platform_right)
+            if(ball_right >= platform_left && ball_left <= platform_right){
                 gravity = 0;
-
+			}
             /* check collision with platform */
             if(ball_right == (platform_left - 1))
                 collision_right = 1;
@@ -610,15 +633,15 @@ static void game_collision_check(void)
     game_collision.right = collision_right;
 
     /* let ball fall */
-    if(gravity == 1 && game_ball.y < (YSTART + game_yshift.value - 1))
-        game_ball.y++;
+    if(gravity == 1 && game_ball.y < (YSTART - 1))
+        game_ball.y = (game_ball.y + 1) & YMOD;
 
 }
 
 static void game_over_check(void)
 {
     /* check if top of ball hit the top of playing field */
-    if((game_ball.y - 3) == (game_yshift.value + YEND))
+    if((game_ball.y - 3) == YEND)
         game_loop_state = I_GAME_OVER;
 
 }
@@ -666,24 +689,18 @@ static void game_draw_ball(xy_point lower_left, void (*drawPx)(const uint8_t, co
 
 }
 
-// TODO: use accelerometer x (0 = 128, left = pos, right = neg)
 static void game_set_ball_x(void)
 {
-    /* check wii arrows */
-    switch(wii_data.button_h & (ARROW_LEFT | ARROW_RIGHT)){
-
-        case ARROW_LEFT: if(game_collision.left == 0)
-                             game_ball.x--;
-                         break;
-
-        case ARROW_RIGHT: if(game_collision.right == 0)
-                              game_ball.x++;
-                          break;
-
-        default:		break;	
-    }
-
-    wii_data.button_h = 0;
+	/* wii tillted left */
+	if(wii_data.accel_x < TILT_LEFT){
+		if(game_collision.left == 0)
+			game_ball.x--;
+	}
+	/* wii tillted right */
+	if(wii_data.accel_x > TILT_RIGHT){
+		if(game_collision.right == 0)
+			game_ball.x++;
+	}
 }
 
 static void wii_conn_callback(uint8_t wii, connection_status_t status)

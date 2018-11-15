@@ -9,6 +9,8 @@
 #define XMID        (XEND/2)
 #define YSTART      (63)
 #define YEND        (0)
+#define YLEN		(64)
+#define YMOD		(63)
 #define XSTART_TXT  (3)
 #define	YSTART_TXT  (10)
 #define YLINE_TXT   (10)
@@ -27,6 +29,9 @@
 #define	BUTTON_B	(0x04)
 #define	BUTTON_MINUS (0x10)
 #define BUTTON_HOME	(0x80)
+
+#define	TILT_LEFT	(110)
+#define TILT_RIGHT	(146)
 
 /* menu state types */
 typedef enum{

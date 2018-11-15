@@ -19,7 +19,7 @@ static I_STATE game_loop_state	    = I_INIT;
 
 /* wii_init_fn globals */
 static const uint8_t wii_nr = 1;
-static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0x4b, 0xf6, 0x80 };
+static const uint8_t wii_mac[6] = { 0x58, 0xbd, 0xa3, 0xba, 0xa1, 0x32 };
 static uint8_t wii_button_h, wii_button_l;
 static uint8_t wii_accel_x, wii_accel_y, wii_accel_z;
 static connection_status_t wii_conn_status;

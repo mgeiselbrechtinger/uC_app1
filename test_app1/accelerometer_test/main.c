@@ -24,7 +24,7 @@ int main(void)
     DDRK = 0xff;
 
 	adcInit();
-	music_init();
+	//music_init();
     glcdInit();	
     game_tick_init();
     sei();
