@@ -15,6 +15,11 @@ LIBDEPS	 :=
 .PHONY: all
 all: main.elf
 
+assembly: main.s hal/hal_glcd.s
+
+%.s: %.c
+	$(CC) $(CFLAGS) $(CCFLAGS) $(CPPFLAGS) -S -o $@ $<
+
 %.o: %.c
 	$(CC) $(CFLAGS) $(CCFLAGS) $(CPPFLAGS) -c -o $@ $<
 
@@ -27,4 +32,4 @@ install: main.elf
 
 .PHONY: clean
 clean:
-	rm -f main.elf main.o hal/hal_glcd.o
+	rm -f main.elf main.o main.s hal/hal_glcd.o hal/hal_glcd.s

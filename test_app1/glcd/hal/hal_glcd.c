@@ -38,9 +38,10 @@
 #define ERROR           (0)
 #define SUCCESS         (1)
 
-#define NOP()           asm volatile( "nop\n\t" ::);
-#define DELAY_140()     asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" ::);
-#define DELAY_450()     asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::);
+#define NOP()           asm volatile( "nop\n\t" ::);    /* 62.5ns delay */
+#define SET_UP_DELAY()  asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 140ns delay */
+#define DATA_RDY_DELAY() asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 320ns delay */
+#define HOLD_DELAY()    asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::);  /* > 450ns delay */
 
 /* global variables */
 typedef struct{
@@ -48,16 +49,26 @@ typedef struct{
 } address_t;
 static address_t address;
 
+typedef enum{
+    DISP_CMD,
+    COL_CMD,
+    PAGE_CMD,
+    START_CMD,
+    STAT_CMD,
+    WR_CMD,
+    RD_CMD
+} display_cmd_t;
+
 /* internal prototypes */
 static void halGlcdCtrlWriteData(const uint8_t controller, const uint8_t data);
 
 static uint8_t halGlcdCtrlReadData(const uint8_t controller);
 
-static void halGlcdCtrlWriteCmd(const uint8_t controller, const uint8_t data);
+static void halGlcdCtrlWriteCmd(const display_cmd_t cmd, const uint8_t data);
 
 static void halGlcdCtrlSetAddress(const uint8_t controller, const uint8_t x, const uint8_t y);
 
-static void halGlcdCtrlBusyWait(const uint8_t controller);
+// static void halGlcdCtrlBusyWait(const uint8_t controller);
 
 static void halGlcdCtrlSelect(const uint8_t controller);
 
@@ -76,17 +87,11 @@ uint8_t halGlcdInit(void)
     CTRL_PORT |=  (1 << RST_PIN);
     CTRL_DDR  |=  (1 << CS1_PIN) | (1 << CS2_PIN) | (1<< RW_PIN) | (1 << E_PIN) | (1 << RS_PIN) | (1 << RST_PIN);
     
-    /* read status instruction */
-    DATA_PORT = 0;
-    DATA_DDR  = (1 << D7_PIN) | (1 << D5_PIN) | (1 << D4_PIN); 
-    CTRL_PORT |= (1 << RW_PIN);
-    CTRL_PORT &= ~(1 << RS_PIN);
+    halGlcdCtrlSelect(CONTROLLER1);
 
-    /* enable controller 1 */
-    CTRL_PORT |= (1 << CS2_PIN);
-    CTRL_PORT &= ~(1 << CS1_PIN);   
+    halGlcdCtrlWriteCmd(STAT_CMD, 0);
 
-    DELAY_140()
+    SET_UP_DELAY()
 
     /* enable instruction */
     CTRL_PORT |= (1 << E_PIN);
@@ -94,29 +99,26 @@ uint8_t halGlcdInit(void)
     /* reset controller */
     CTRL_PORT &= ~(1 << RST_PIN);
 
+    DATA_RDY_DELAY()
+
     /* busy wait for reset, allowed */
     while(!(DATA_PIN & (1 << D4_PIN)))
         ;
 
     CTRL_PORT |= (1 << RST_PIN);
-        
-    DELAY_450()
+
 
     /* dissable instruction */
     CTRL_PORT &= ~(1 << E_PIN);
 
-    /* display on instruction */
-    DATA_DDR  = 1;
-    DATA_PORT = 1;
-    DATA_PORT &= ~((1 << D7_PIN) | (1 << D6_PIN));
-    CTRL_PORT &= ~((1 << RW_PIN) | (1 << RS_PIN));
+    halGlcdCtrlWriteCmd(DISP_CMD, 1);
 
-    DELAY_140()
+    SET_UP_DELAY()
 
     /* enable instruction */
     CTRL_PORT |= (1 << E_PIN);
     
-    DELAY_450()
+    HOLD_DELAY()
 
     /* dissable instruction */
     CTRL_PORT &= ~(1 << E_PIN);
@@ -125,6 +127,75 @@ uint8_t halGlcdInit(void)
     memset(&address, 0, sizeof address);
 
     return SUCCESS;
+}
+
+void halGlcdCtrlSelect(const uint8_t controller)
+{
+    /* select controller */
+    if(controller == CONTROLLER1){
+        CTRL_PORT |= (1 << CS2_PIN);
+        CTRL_PORT &= ~(1 << CS1_PIN);
+
+    }else{
+        CTRL_PORT |= (1 << CS1_PIN);
+        CTRL_PORT &= ~(1 << CS2_PIN);
+    }
+
+}
+
+static void halGlcdCtrlWriteCmd(const display_cmd_t cmd, const uint8_t data)
+{
+   switch(cmd){
+
+        case DISP_CMD:  CTRL_PORT &= ~((1 << RS_PIN) | (1 << RW_PIN));
+                        DATA_PORT = data;
+                        DATA_PORT |= 0xfe;
+                        DATA_PORT &= ~((1 << D7_PIN) | (1 << D6_PIN));
+                        DATA_DDR = 0xff;
+                        break;
+
+        case COL_CMD:   CTRL_PORT &= ~((1 << RS_PIN) | (1 << RW_PIN));
+                        DATA_PORT = data;
+                        DATA_PORT &= ~(1 << D6_PIN);
+                        DATA_PORT |=  (1 << D7_PIN);
+                        DATA_DDR = 0xff;
+                        break;
+
+        case PAGE_CMD:  CTRL_PORT &= ~((1 << RS_PIN) | (1 << RW_PIN));
+                        DATA_PORT = data;
+                        DATA_PORT &= ~(1 << D7_PIN);
+                        DATA_PORT |=  (1 << D6_PIN);
+                        DATA_DDR = 0xff;
+                        break;
+
+        case START_CMD: CTRL_PORT &= ~((1 << RS_PIN) | (1 << RW_PIN));
+                        DATA_PORT = data;
+                        DATA_PORT |=  (1 << D7_PIN) | (1 << D6_PIN);
+                        DATA_DDR = 0xff;
+                        break;
+
+        case STAT_CMD:  CTRL_PORT &= ~(1 << RS_PIN);
+                        CTRL_PORT |=  (1 << RW_PIN);
+                        DATA_PORT = 0x00;
+                        DATA_DDR  = 0xff;
+                        DATA_DDR &= ~((1 << D7_PIN) | (1 << D5_PIN) | (1 << D4_PIN));
+                        break;
+
+        case WR_CMD:    CTRL_PORT &= ~(1 << RW_PIN);
+                        CTRL_PORT |=  (1 << RS_PIN);
+                        DATA_PORT = data;
+                        DATA_DDR  = 0xff;
+                        break;
+
+        case RD_CMD:    CTRL_PORT |= (1 << RS_PIN) | (1 << RW_PIN);
+                        DATA_PORT = 0x00;
+                        DATA_DDR  = 0x00;
+                        break;
+
+        default:        break;
+
+   }
+
 }
 
 uint8_t halGlcdSetAddress(const uint8_t xCol, const uint8_t yPage)
@@ -143,48 +214,108 @@ uint8_t halGlcdSetAddress(const uint8_t xCol, const uint8_t yPage)
 
 static void halGlcdCtrlSetAddress(const uint8_t controller, const uint8_t x, const uint8_t y)
 {
-    /* select controller */
-    if(controller == CONTROLLER1){
-        CTRL_PORT |= (1 << CS2_PIN);
-        CTRL_PORT &= ~(1 << CS1_PIN);
+    halGlcdCtrlSelect(controller);
 
-    }else{
-        CTRL_PORT |= (1 << CS1_PIN);
-        CTRL_PORT &= ~(1 << CS2_PIN);
-    }
+    /* set x-column address */
+    halGlcdCtrlWriteCmd(COL_CMD, x);
 
-    /* control bits for both instructions */
-    CTRL_PORT &= ~((1 << RS_PIN) | (1 << RW_PIN));
-
-    /* set up x address */
-    DATA_DDR  = 1;
-    DATA_PORT = x;
-    DATA_PORT |= (1 << D6_PIN);
-    DATA_PORT &= ~(1 << D7_PIN);
-
-    DELAY_140()
+    SET_UP_DELAY()
 
     /* enable instruction */
     CTRL_PORT |= (1 << E_PIN);
     
-    DELAY_450()
+    HOLD_DELAY()
 
     /* dissable instruction */
     CTRL_PORT &= ~(1 << E_PIN);
 
-    /* set up y page */
-    DATA_PORT = y;
-    DATA_PORT |= (1 << D7_PIN);
-    DATA_PORT &= ~(1 << D6_PIN);
+    /* data hold timing */
+    NOP()
 
-    DELAY_140()
+    /* set y-page address */
+    halGlcdCtrlWriteCmd(PAGE_CMD, y);
+
+    SET_UP_DELAY()
 
     /* enable instruction */
     CTRL_PORT |= (1 << E_PIN);
     
-    DELAY_450()
+    HOLD_DELAY()
 
     /* dissable instruction */
     CTRL_PORT &= ~(1 << E_PIN);
 
+}
+
+uint8_t halGlcdWriteData(const uint8_t data)
+{
+
+    if(address.x < C2_XCOL_START)
+        halGlcdCtrlWriteData(CONTROLLER1, data);
+    else
+        halGlcdCtrlWriteData(CONTROLLER2, data);
+
+    /* post increment of write function */
+    address.x = (address.x + 1) & MOD_COL;
+
+    return SUCCESS;
+}
+
+void halGlcdCtrlWriteData(const uint8_t controller, const uint8_t data)
+{
+    halGlcdCtrlSelect(controller);
+
+    halGlcdCtrlWriteCmd(WR_CMD, data);
+
+    SET_UP_DELAY()
+
+    /* enable instruction */
+    CTRL_PORT |= (1 << E_PIN);
+
+    HOLD_DELAY()
+
+    /* dissable instruction */
+    CTRL_PORT &= ~(1 << E_PIN);
+
+}
+
+uint8_t halGlcdReadData(void)
+{
+    uint8_t data;
+
+    if(address.x < C2_XCOL_START)
+        data = halGlcdCtrlReadData(CONTROLLER1);
+    else
+        data = halGlcdCtrlReadData(CONTROLLER2);
+
+    /* post increment of read function */
+    address.x = (address.x + 1) & MOD_COL;
+
+    return data;
+}
+
+uint8_t halGlcdCtrlReadData(const uint8_t controller)
+{
+    uint8_t data;
+
+    halGlcdCtrlSelect(controller);
+
+    halGlcdCtrlWriteCmd(RD_CMD, 0);
+
+    SET_UP_DELAY()
+
+    /* enable instruction */
+    CTRL_PORT |= (1 << E_PIN);
+
+    DATA_RDY_DELAY()
+
+    /* data valid */
+    data = DATA_PIN;
+
+    NOP()
+
+    /* dissable instruction */
+    CTRL_PORT &= ~(1 << E_PIN);
+
+    return data;
 }
