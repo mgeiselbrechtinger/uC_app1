@@ -7,4 +7,6 @@
 error_t halWT41FcUartInit(void (*sndCallback)(), void (*rcvCallback)(uint8_t));
 error_t halWT41FcUartSend(uint8_t byte);
 
+static void rcv_buff_empty(void);
+
 #endif

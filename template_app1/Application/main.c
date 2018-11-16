@@ -1,4 +1,5 @@
 #include	<avr/io.h>
+#include	<avr/sleep.h>
 #include	<avr/interrupt.h>
 #include	<stdint.h>
 
@@ -19,28 +20,28 @@ static void game_tick_init(void)
 
 int main(void)
 {
-    // TODO debug
-    PORTK = 0;
-    DDRK = 0xff;
-	PORTL = 0;
-	DDRL = 0xff;
-
-    // TODO use menu_init();
+	/* initializations */
     adcInit();
     music_init();
     glcdInit();
 	menu_init();
     game_tick_init();
+	set_sleep_mode(SLEEP_MODE_IDLE);
+
     sei();
 
-    // TODO turn on music and goto sleep
     for(;;){
+		/* play music in background */
         music_bt();
+		/* go to sleep */
+		sleep_enable();
+		sleep_cpu();
     }
 }
 
 ISR(TIMER3_COMPA_vect)
 {
     sei();
+	/* update gameplay */
     menu_fn();
 }

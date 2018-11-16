@@ -15,6 +15,8 @@ void spiInit(void)
     // set MMC_CS as output
     PORTG &= ~(1 << PG1);
     DDRG  |=  (1 << PG1);
+	// dissable double speed
+    SPSR &= ~(1<< SPI2X);
     // enable SPI, mode 0, MSB first
     SPCR = (1 << SPE) | (1 << MSTR);
 }
@@ -39,10 +41,6 @@ uint8_t spiReceive(void)
 
 void spiSetPrescaler(spi_prescaler_t prescaler)
 {
-    SPSR &= ~(1 << SPI2X);
-
-    if(prescaler == SPI_PRESCALER_128)
-        SPCR |= (1 << SPR0) | (1 << SPR1);
-    else // SPI_PRESCALER_4
-        SPCR &= ~((1 << SPR0) | (1 << SPR1));
+    SPCR &= ~((1 << SPR0) | (1 << SPR1));
+    SPCR |= prescaler;
 }

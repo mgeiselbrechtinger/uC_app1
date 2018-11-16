@@ -1,0 +1,12 @@
+
+*** These modified files were found in JOE when it aborted on Fri Nov 16 14:38:58 2018
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+/homes/m01609418/.cache/.fr-CkNu7s/wiimote/wii_user/wii_user.c
+
+*** File '* Startup Log *'
+Processing '/etc/joe/jstarrc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/jstarrc
