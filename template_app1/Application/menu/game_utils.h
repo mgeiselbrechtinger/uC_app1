@@ -114,15 +114,19 @@ PGM_P const hs_table[] PROGMEM =
 
 /* game platforms */
 /* game platform number has to be power of 2 */
-#define GAME_PLATFORM_NR (4) 
+#define GAME_PLATFORM_NR (8) 
 /* game platform coords has to be multiple of 2 */
 #define GAME_PLATFORM_COORDS (6)
 /* three platforms per line with at least 6 pixel gaps = 6 x-coords out of [0,127] */
 const uint8_t game_platform_templates[GAME_PLATFORM_NR][GAME_PLATFORM_COORDS] = { 
     {0, 5, 15, 97, 110, 127},
     {8, 44, 52, 100, 108, 127},
-    {0, 66, 75, 111, 118, 120}, 
-    {0, 20, 29, 88, 110, 127} 
+    {0, 66, 75, 111, 120, 127}, 
+    {0, 20, 29, 88, 110, 127},
+	{0, 0, 0, 0, 20, 118},
+	{0, 0, 15, 70, 100, 127},
+	{0, 0, 0, 0, 21, 127},
+	{0, 0, 0, 0, 0, 106},
 };
 
 

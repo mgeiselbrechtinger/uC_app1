@@ -9,4 +9,6 @@ uint8_t halGlcdWriteData(const uint8_t data);
 
 uint8_t halGlcdReadData(void);
 
+uint8_t halGlcdFillScreen(uint8_t pattern);
+
 #endif

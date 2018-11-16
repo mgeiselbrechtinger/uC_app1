@@ -105,8 +105,8 @@ uint8_t halGlcdInit(void)
 	halGlcdCtrlWriteCmd(CONTROLLER0, START_CMD, START_LINE);
 
     /* turn on controller 1 */
-	halGlcdCtrlWriteCmd(CONTROLLER1, DISP_CMD, DISP_ON);
-	halGlcdCtrlWriteCmd(CONTROLLER1, START_CMD, START_LINE);
+	halGlcdCtrlWriteCmd(CONTROLLER0, DISP_CMD, DISP_ON);
+	halGlcdCtrlWriteCmd(CONTROLLER0, START_CMD, START_LINE);
 	
 	/* clear Screen */
     halGlcdFillScreen(0x00);
@@ -134,20 +134,6 @@ void halGlcdCtrlSelect(const uint8_t controller)
         CTRL_PORT &= ~(1 << CS2_PIN);
     }
 
-}
-
-static void halGlcdCtrlBusyWait(void)
-{
-    /* test if busy */
-    halGlcdCtrlSetCmd(STAT_CMD, 0);
-
-	//halGlcdCtrlEnableCmd();
-	CTRL_PORT |= (1 << E_PIN);
-
-    while(DATA_PIN & (1 << D5_PIN))
-        ;
-
-	CTRL_PORT &= ~(1 << E_PIN);
 }
 
 static void halGlcdCtrlSetCmd(const display_cmd_t cmd, const uint8_t data)
@@ -285,6 +271,18 @@ uint8_t halGlcdCtrlReadData(const uint8_t controller)
     return data;
 }
 
+static void halGlcdCtrlBusyWait(void)
+{
+    /* test if busy */
+    halGlcdCtrlSetCmd(STAT_CMD, 0);
+
+	halGlcdCtrlEnableCmd();
+
+    while(DATA_PIN & (1 << D5_PIN))
+        ;
+
+}
+
 uint8_t halGlcdFillScreen(uint8_t pattern)
 {
     uint8_t x, y;
@@ -293,8 +291,6 @@ uint8_t halGlcdFillScreen(uint8_t pattern)
         halGlcdSetAddress(C1_XCOL_START, y);
 
         for(x = C1_XCOL_START; x <= C2_XCOL_END; x++){
-			PORTK = x;
-			//halGlcdSetAddress(x,y);
 			halGlcdWriteData(pattern);
         }
     }
