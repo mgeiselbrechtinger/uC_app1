@@ -12,11 +12,11 @@ int main(void)
     DDRK  = 0xff;
     PORTL = 0x00;
     DDRL  = 0xff;
-
-    halGlcdInit();
+	for(uint8_t i = 0; i < 5; i++)
+    	halGlcdInit();
 	
-    halGlcdSetAddress(0x3f, 0x01);
-    halGlcdWriteData(0xAA);
+    halGlcdSetAddress(0x00, 0x00);
+    halGlcdWriteData(0xff);
     halGlcdWriteData(0x55);
 	/*
     uint8_t data1, data2;
