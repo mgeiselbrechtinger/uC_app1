@@ -27,22 +27,23 @@
 
 #define CONTROLLER0     (0)
 #define CONTROLLER1     (1)
-#define	YPAGE_START		(0)
-#define YPAGE_END		(7)
+#define	YPAGE_START	(0)
+#define YPAGE_END	(7)
 #define C1_XCOL_START   (0)
 #define C1_XCOL_END     (63)
 #define C2_XCOL_START   (64)
 #define C2_XCOL_END     (127)
-#define START_LINE		(0)
+#define START_LINE	(0)
 
 #define MOD_COL         (127)
 #define MOD_PAGE        (7)
+#define MOD_SHIFT       (63)
 
 #define ERROR           (0)
 #define SUCCESS         (1)
 
-#define DISP_ON			(1)
-#define DISP_OFF		(0)
+#define DISP_ON		(1)
+#define DISP_OFF	(0)
 
 #define NOP()           asm volatile( "nop\n\t" ::);    /* 62.5ns delay */
 #define SET_UP_DELAY()  asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 140ns delay */
@@ -93,7 +94,7 @@ uint8_t halGlcdInit(void)
     memset(&address, 0, sizeof address);
 
     /* initialize control port */
-    CTRL_PORT |=  (1 << CS1_PIN) | (1 << CS2_PIN);
+    CTRL_PORT &= ~((1 << CS1_PIN) | (1 << CS2_PIN));
     CTRL_PORT &= ~(1 << RW_PIN);
     CTRL_PORT &= ~(1 << E_PIN); 
     CTRL_PORT &= ~(1 << RS_PIN);
@@ -101,25 +102,25 @@ uint8_t halGlcdInit(void)
     CTRL_DDR  |=  (1 << CS1_PIN) | (1 << CS2_PIN) | (1<< RW_PIN) | (1 << E_PIN) | (1 << RS_PIN) | (1 << RST_PIN);
 
     /* turn on controller 0 */
-	halGlcdCtrlWriteCmd(CONTROLLER0, DISP_CMD, DISP_ON);
-	halGlcdCtrlWriteCmd(CONTROLLER0, START_CMD, START_LINE);
+    halGlcdCtrlWriteCmd(CONTROLLER0, DISP_CMD, DISP_ON);
+    halGlcdCtrlWriteCmd(CONTROLLER0, START_CMD, START_LINE);
 
     /* turn on controller 1 */
-	halGlcdCtrlWriteCmd(CONTROLLER1, DISP_CMD, DISP_ON);
-	halGlcdCtrlWriteCmd(CONTROLLER1, START_CMD, START_LINE);
-	
-	/* clear Screen */
+    halGlcdCtrlWriteCmd(CONTROLLER1, DISP_CMD, DISP_ON);
+    halGlcdCtrlWriteCmd(CONTROLLER1, START_CMD, START_LINE);
+
+    /* clear Screen */
     halGlcdFillScreen(0x00);
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 void halGlcdCtrlWriteCmd(const uint8_t controller, const display_cmd_t cmd, const uint8_t data)
 {
-	halGlcdCtrlSelect(controller);
-	halGlcdCtrlBusyWait();
-	halGlcdCtrlSetCmd(cmd, data);
-	halGlcdCtrlEnableCmd();
+    halGlcdCtrlSelect(controller);
+    halGlcdCtrlBusyWait();
+    halGlcdCtrlSetCmd(cmd, data);
+    halGlcdCtrlEnableCmd();
 }
 
 void halGlcdCtrlSelect(const uint8_t controller)
@@ -138,16 +139,14 @@ void halGlcdCtrlSelect(const uint8_t controller)
 
 static void halGlcdCtrlBusyWait(void)
 {
-    /* test if busy */
     halGlcdCtrlSetCmd(STAT_CMD, 0);
 
-	//halGlcdCtrlEnableCmd();
-	CTRL_PORT |= (1 << E_PIN);
+    halGlcdCtrlEnableCmd();
 
-    while(DATA_PIN & (1 << D5_PIN))
+    /* busy wait for busy and reset flag, allowed */
+    while(DATA_PIN & ((1 << D7_PIN) | (1 << D4_PIN)))
         ;
 
-	CTRL_PORT &= ~(1 << E_PIN);
 }
 
 static void halGlcdCtrlSetCmd(const display_cmd_t cmd, const uint8_t data)
@@ -207,13 +206,13 @@ static void halGlcdCtrlSetCmd(const display_cmd_t cmd, const uint8_t data)
 
 void halGlcdCtrlEnableCmd(void)
 {
-	SET_UP_DELAY()
+    SET_UP_DELAY()
 
-	CTRL_PORT |= (1 << E_PIN);
+    CTRL_PORT |= (1 << E_PIN);
 
-	HOLD_DELAY()
+    HOLD_DELAY()
 
-	CTRL_PORT &= ~(1 << E_PIN);
+    CTRL_PORT &= ~(1 << E_PIN);
 }
 
 uint8_t halGlcdSetAddress(const uint8_t xCol, const uint8_t yPage)
@@ -232,9 +231,9 @@ uint8_t halGlcdSetAddress(const uint8_t xCol, const uint8_t yPage)
 
 static void halGlcdCtrlSetAddress(const uint8_t controller, const uint8_t x, const uint8_t y)
 {
-	halGlcdCtrlWriteCmd(controller, COL_CMD, x);
+    halGlcdCtrlWriteCmd(controller, COL_CMD, x);
 
-	halGlcdCtrlWriteCmd(controller, PAGE_CMD, y);
+    halGlcdCtrlWriteCmd(controller, PAGE_CMD, y);
 
 }
 
@@ -254,7 +253,7 @@ uint8_t halGlcdWriteData(const uint8_t data)
 
 void halGlcdCtrlWriteData(const uint8_t controller, const uint8_t data)
 {
-	halGlcdCtrlWriteCmd(controller, WR_CMD, data);
+    halGlcdCtrlWriteCmd(controller, WR_CMD, data);
 
 }
 
@@ -293,11 +292,28 @@ uint8_t halGlcdFillScreen(uint8_t pattern)
         halGlcdSetAddress(C1_XCOL_START, y);
 
         for(x = C1_XCOL_START; x <= C2_XCOL_END; x++){
-			PORTK = x;
-			//halGlcdSetAddress(x,y);
-			halGlcdWriteData(pattern);
+            halGlcdWriteData(pattern);
         }
     }
 
-	return SUCCESS;
+    return SUCCESS;
 }
+
+uint8_t halGlcdSetYShift(uint8_t yshift)
+{
+    address.y = yshift & MOD_SHIFT;
+
+    halGlcdCtrlWriteCmd(CONTROLLER0, START_CMD, address.y);
+    
+    halGlcdCtrlWriteCmd(CONTROLLER1, START_CMD, address.y);
+
+    return SUCCESS;
+}
+
+uint8_t halGlcdGetYShift(void)
+{
+    return address.y;
+
+}
+
+

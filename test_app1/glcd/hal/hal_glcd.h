@@ -11,4 +11,8 @@ uint8_t halGlcdReadData(void);
 
 uint8_t halGlcdFillScreen(uint8_t pattern);
 
+uint8_t halGlcdSetYShift(uint8_t yshift);
+
+uint8_t halGlcdGetYShift(void);
+
 #endif
