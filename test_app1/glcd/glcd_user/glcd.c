@@ -82,7 +82,7 @@ void glcdDrawLine(const xy_point p1, const xy_point p2, void (*drawPx)(const uin
     x = p1.x;
     y = p2.y;
 
-    while(x != p2.x && y != p2.y){
+    while(x != p2.x){
         drawPx(x, y);
         
         if(x < p2.x)

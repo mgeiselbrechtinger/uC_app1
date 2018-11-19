@@ -83,6 +83,8 @@ static void halGlcdCtrlBusyWait();
 
 static void halGlcdCtrlSelect(const uint8_t controller);
 
+static void halGlcdCtrlFillScreen(const uint8_t controller, const uint8_t pattern);
+
 /* implementations */
 
 /**
@@ -115,7 +117,7 @@ uint8_t halGlcdInit(void)
     return SUCCESS;
 }
 
-void halGlcdCtrlWriteCmd(const uint8_t controller, const display_cmd_t cmd, const uint8_t data)
+static void halGlcdCtrlWriteCmd(const uint8_t controller, const display_cmd_t cmd, const uint8_t data)
 {
     halGlcdCtrlSelect(controller);
     halGlcdCtrlBusyWait();
@@ -123,7 +125,7 @@ void halGlcdCtrlWriteCmd(const uint8_t controller, const display_cmd_t cmd, cons
     halGlcdCtrlEnableCmd();
 }
 
-void halGlcdCtrlSelect(const uint8_t controller)
+static void halGlcdCtrlSelect(const uint8_t controller)
 {
     /* select controller */
     if(controller == CONTROLLER0){
@@ -204,7 +206,7 @@ static void halGlcdCtrlSetCmd(const display_cmd_t cmd, const uint8_t data)
 
 }
 
-void halGlcdCtrlEnableCmd(void)
+static void halGlcdCtrlEnableCmd(void)
 {
     SET_UP_DELAY()
 
@@ -240,18 +242,20 @@ static void halGlcdCtrlSetAddress(const uint8_t controller, const uint8_t x, con
 uint8_t halGlcdWriteData(const uint8_t data)
 {
 
-    if(address.x < C2_XCOL_START)
+    if(address.x < 64)
         halGlcdCtrlWriteData(CONTROLLER0, data);
     else
         halGlcdCtrlWriteData(CONTROLLER1, data);
 
     /* post increment of write function */
     address.x = (address.x + 1) & MOD_COL;
-
-    return SUCCESS;
+	if(address.x == C1_XCOL_START || address.x == C2_XCOL_START)
+		halGlcdSetAddress(address.x, address.y);
+    
+	return SUCCESS;
 }
 
-void halGlcdCtrlWriteData(const uint8_t controller, const uint8_t data)
+static void halGlcdCtrlWriteData(const uint8_t controller, const uint8_t data)
 {
     halGlcdCtrlWriteCmd(controller, WR_CMD, data);
 
@@ -265,41 +269,47 @@ uint8_t halGlcdReadData(void)
         data = halGlcdCtrlReadData(CONTROLLER0);
     else
         data = halGlcdCtrlReadData(CONTROLLER1);
-
-    /* post increment of read function */
+	
+    /* post increment of write function */
     address.x = (address.x + 1) & MOD_COL;
+	if(address.x == C1_XCOL_START || address.x == C2_XCOL_START)
+		halGlcdSetAddress(address.x, address.y);
 
     return data;
 }
 
 uint8_t halGlcdCtrlReadData(const uint8_t controller)
 {
-    uint8_t data;
+	/* dummy read */
+	halGlcdCtrlWriteCmd(controller, RD_CMD, 0);
+	/* actual read */
+	halGlcdCtrlWriteCmd(controller, RD_CMD, 0);
 
-    halGlcdCtrlWriteCmd(controller, RD_CMD, 0);
-
-    /* data valid */
-    data = DATA_PIN;
-
-    return data;
+    return DATA_PIN;
 }
 
-uint8_t halGlcdFillScreen(uint8_t pattern)
+static void halGlcdCtrlFillScreen(const uint8_t controller, const uint8_t pattern)
 {
-    uint8_t x, y;
+	uint8_t x, y;
 
-    for(y = YPAGE_START; y <= YPAGE_END; y++){
-        halGlcdSetAddress(C1_XCOL_START, y);
+    for(y = 0; y <= 7; y++){
+        halGlcdCtrlSetAddress(controller,0 , y);
 
-        for(x = C1_XCOL_START; x <= C2_XCOL_END; x++){
-            halGlcdWriteData(pattern);
+        for(x = 0; x <= 63; x++){
+            halGlcdCtrlWriteData(controller, pattern);
         }
     }
+
+}
+uint8_t halGlcdFillScreen(const uint8_t pattern)
+{
+	halGlcdCtrlFillScreen(CONTROLLER0, pattern);
+	halGlcdCtrlFillScreen(CONTROLLER1, pattern);
 
     return SUCCESS;
 }
 
-uint8_t halGlcdSetYShift(uint8_t yshift)
+uint8_t halGlcdSetYShift(const uint8_t yshift)
 {
     address.y = yshift & MOD_SHIFT;
 
