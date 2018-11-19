@@ -11,7 +11,7 @@ void glcdClearPixel(const uint8_t x, const uint8_t y);
 
 void glcdInvertPixel(const uint8_t x, const uint8_t y);
 
-tybedef struct xy_point_t {
+typedef struct xy_point_t {
     uint8_t x, y;
 } xy_point;
 

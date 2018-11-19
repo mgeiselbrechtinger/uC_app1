@@ -5,10 +5,10 @@ AVRPROG2 := avrprog2
 
 CFLAGS   := -mmcu=atmega1280
 CCFLAGS  := -std=gnu99 -Wall -Wno-main -O2 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
-CPPFLAGS := -I. -I./hal/
+CPPFLAGS := -I. -I./hal/ -I./glcd_user/ -I./font/
 LDFLAGS  := -L.
 
-OBJS	 := main.o hal/hal_glcd.o 
+OBJS	 := main.o hal/hal_glcd.o glcd_user/glcd.o font/Standard5x7.o
 LIBS	 := 
 LIBDEPS	 := 
 
@@ -32,4 +32,4 @@ install: main.elf
 
 .PHONY: clean
 clean:
-	rm -f main.elf main.o main.s hal/hal_glcd.o hal/hal_glcd.s
+	rm -f main.elf $(OBJS)
