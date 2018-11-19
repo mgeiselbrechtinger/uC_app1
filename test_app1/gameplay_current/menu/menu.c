@@ -7,8 +7,10 @@
 #include    "./game_utils.h"
 #include    "../rand/rand.h"
 #include    "../libwiimote/wii_user.h"
-#include    "../libglcd/glcd.h"
-#include    "../font/Standard5x7.h"
+//#include    "../libglcd/glcd.h"
+//#include    "../font/Standard5x7.h"
+#include    "../glcd/font/Standard5x7.h"
+#include    "../glcd/glcd_user/glcd.h"
 
   //////////////////////
  /* global variables */

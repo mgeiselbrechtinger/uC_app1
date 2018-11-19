@@ -2,10 +2,11 @@
 #include	<avr/interrupt.h>
 #include	<stdint.h>
 
-#include    "./music/music.h"
+#include        "./music/music.h"
 #include	"./adc/adc.h"
 #include	"./menu/menu.h"
-#include	"./libglcd/glcd.h"
+#include        "./glcd/glcd_user/glcd.h"
+//#include	"./libglcd/glcd.h"
 
 static void game_tick_init(void)
 {
@@ -22,14 +23,14 @@ int main(void)
     // TODO debug
     PORTK = 0;
     DDRK = 0xff;
-	PORTL = 0;
-	DDRL = 0xff;
+    PORTL = 0;
+    DDRL = 0xff;
 
     // TODO use menu_init();
     adcInit();
     music_init();
     glcdInit();
-	menu_init();
+    menu_init();
     game_tick_init();
     sei();
 
