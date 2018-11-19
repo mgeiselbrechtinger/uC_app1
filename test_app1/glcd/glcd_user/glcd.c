@@ -1,5 +1,6 @@
 #include    <avr/io.h>
 #include    <avr/pgmspace.h>
+#include    <stdlib.h>
 #include    <stdint.h>
 #include    <string.h>
 
@@ -18,7 +19,12 @@
 #define PAGE_SIZE   (8)
 #define PAGE_MOD    (7)
 
+/* prototypes */
+static void glcdDrawLineLow(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y));
 
+static void glcdDrawLineHigh(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y));
+
+/* implementations */
 void glcdInit(void)
 {
     halGlcdInit();
@@ -75,64 +81,109 @@ void glcdInvertPixel(const uint8_t x, const uint8_t y)
     halGlcdWriteData(page_data);
 }
 
-void glcdDrawLine(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
+static void glcdDrawLineLow(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
+    int8_t dx, dy, yi, D;
     uint8_t x, y;
+
+    dx = p2.x - p1.x;
+    dy = p2.y - p1.y;
     
-    x = p1.x;
-    y = p2.y;
+    yi = 1;
+    if(dy < 0){
+        yi = -1;
+        dy = -dy;
+    }
 
-    while(x != p2.x){
+    D = 2*dy - dx;
+    y = p1.y;
+
+    for(x = p1.x; x <= p2.x; x++){
         drawPx(x, y);
-        
-        if(x < p2.x)
-            x = (x + 1) & X_MOD;
-        
-        if(x > p2.x)
-            x = (x - 1) & X_MOD;
 
-        if(y < p2.y)
-            y = (y + 1) & Y_MOD;
+        if(D > 0){
+            y += yi;
+            D -= 2*dx;
+        }
 
-        if(y > p2.y)
-            y = (y - 1) & Y_MOD;
+        D += 2*dy;
     }
 }
 
+static void glcdDrawLineHigh(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
+{
+    int8_t dx, dy, xi, D;
+    uint8_t x, y;
+
+    dx = p2.x - p1.x;
+    dy = p2.y - p1.y;
+    
+    xi = 1;
+    if(dx < 0){
+        xi = -1;
+        dx = -dx;
+    }
+
+    D = 2*dx - dy;
+    x = p1.x;
+
+    for(y = p1.y; y <= p2.y; y++){
+        drawPx(x, y);
+
+        if(D > 0){
+            x += xi;
+            D -= 2*dy;
+        }
+
+        D += 2*dx;
+    }
+}
+
+/* Bresenham algorithm */
+void glcdDrawLine(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
+{
+    if(abs(p2.y - p1.y) < abs(p2.x - p1.x)){
+        if(p1.x > p2.x)
+            glcdDrawLineLow(p2, p1, drawPx);
+        else
+            glcdDrawLineLow(p1, p2, drawPx);
+    
+    }else{
+        if(p1.y > p2.y)
+            glcdDrawLineHigh(p2, p1, drawPx);
+        else
+            glcdDrawLineHigh(p1, p2, drawPx);
+    }
+}   
+
+// TODO corner cases
 void glcdDrawRect(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
     xy_point p_start, p_end;
     
-    /* sort x coordinate */
-    if(p2.x < p1.x){
-        p_start.x = p2.x;
-        p_end.x = p1.x;
-    
-    }else{
-        p_start.x = p1.x;
-        p_end.x = p2.x;
-    }
-    /* sort y coordinate */
-    if(p2.y < p1.y){
-        p_start.y = p2.y;
-        p_end.y = p1.y;
-    
-    }else{
-        p_start.y = p1.y;
-        p_end.y = p2.y;
-    }
-
+    /* first horizontal */
+    p_start.x = p1.x;
+    p_start.y = p1.y;
+    p_end.x = p2.x;
+    p_end.y = p1.y;
     glcdDrawLine(p_start, p_end, drawPx);
 
-    for(p_start.y += 1; p_start.y < p_end.y; p_start.y++){
-        drawPx(p_start.x, p_start.y);
-        
-        if(p_start.x != p_end.x)
-            drawPx(p_end.x, p_start.y);
-    }
+    /* second horizontal */
+    p_start.y = p2.y;
+    p_end.y = p2.y;    
+    glcdDrawLine(p_start, p_end, drawPx);
 
-    if(p_start.y == p_end.y)
-        glcdDrawLine(p_start, p_end, drawPx);
+    /* first vertical */
+    p_start.x = p1.x;
+    p_start.y = p1.y;
+    p_end.x = p1.x;
+    p_end.y = p2.y;
+    glcdDrawLine(p_start, p_end, drawPx);
+
+    /* second vertical */
+    p_start.x = p2.x;
+    p_end.x = p2.x;
+    glcdDrawLine(p_start, p_end, drawPx);
 
 }
     
@@ -158,56 +209,35 @@ uint8_t glcdGetYShift(void)
 /* bresenham algorithm */
 void glcdDrawCircle(const xy_point c, const uint8_t radius, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
-    //int8_t r, x, y, err;
-    //r = radius;
-    //x = -r;             /* start with second quadrant */
-    //y = 0; 
-    //err = 2 - 2*radius; /* error of first step */
+    int8_t r, x, y, err;
+    r = radius;
+    x = -r;             /* start with second quadrant */
+    y = 0; 
+    err = 2 - 2*radius; /* error of first step */
 
-    //do{
-    //    drawPx(c.x-x, c.y+y);   /*   I. Quadrant */
-    //    drawPx(c.x-y, c.y-x);   /*  II. Quadrant */
-    //    drawPx(c.x+x, c.y-y);   /* III. Quadrant */
-    //    drawPx(c.x+y, c.y+x);   /*  IV. Quadrant */
-    //
-    //    r = err;
+    do{
+        drawPx(c.x-x, c.y+y);   /*   I. Quadrant */
+        drawPx(c.x-y, c.y-x);   /*  II. Quadrant */
+        drawPx(c.x+x, c.y-y);   /* III. Quadrant */
+        drawPx(c.x+y, c.y+x);   /*  IV. Quadrant */
+    
+        r = err;
 
-    //    /* update y */       
-    //    if(r <= y){
-    //        y++;
-    //        err += y*2 + 1;
-    //    }
+        /* update y */       
+        if(r <= y){
+            y++;
+            err += y*2 + 1;
+        }
 
-    //    /* update x */
-    //    if(r > x || err > y){
-    //        x++;
-    //        err += x*2 + 1;
-    //    }
+        /* update x */
+        if(r > x || err > y){
+            x++;
+            err += x*2 + 1;
+        }
 
-    //while(x < 0);
+    }while(x < 0);
 }
 
-/* bresenham algorithm */
-void glcdDrawEllipse(const xy_point c, const uint8_t radiusX, const uint8_t radiusY, void (*drawPx)(const uint8_t x, const uint8_t y))
-{
-//    int8_t radiusY_1, x0, x1, y0, y1;
-//    int16_t dx, dy, err, e2; 
-//    
-//    radiusY_1 = radiusY & 1;
-//    dx = 4*(1-radiusX)*b*b;
-//    dy = 4*(radiusY_1 + 1)*a*a;
-//    err = dx + dy + radiusY_1*a*a;
-//
-//    x0 = c - radiusX;
-//    y0 = c - radiusY;
-//    x1 = c + radiusX;
-//    y1 = c + radiusY;
-//    
-//    /* starting point */
-//    y0 *= (radiusY + 1)/2;
-//    y1 = y0 - radiusY_1;
-//
-}
 void glcdDrawVertical(const uint8_t x, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
     uint8_t y;
@@ -249,12 +279,10 @@ void glcdFillRect(const xy_point p1, const xy_point p2, void (*drawPx)(const uin
         p_start.y = p1.y;
         p_end.y = p2.y;
     }
-
-    glcdDrawLine(p_start, p_end, drawPx);
     
     p_tmp.x = p_end.x;
 
-    for(p_start.y += 1; p_start.y < p_end.y; p_start.y++){
+    for(; p_start.y < p_end.y; p_start.y++){
         p_tmp.y = p_start.y;
         glcdDrawLine(p_start, p_tmp, drawPx);
     }
@@ -282,20 +310,23 @@ void glcdDrawChar(const char c, const xy_point p, const font* f, void (*drawPx)(
     pos.y = p.y;
 
     /* for each byte */
-    for(i = 0; i < f->width; i ++){
+    for(i = 0; i < f->width; i++){
         /* load byte from program memory */
         data = pgm_read_byte(c_p + i);
         
-        pos.x += i;
+        pos.y = p.y;
+
         /* for each bit */
         for(j = 0; j < f->height; j++){
-            pos.y += j;
             
             /* if bit set */
             if(data & (1 << j))
                 drawPx(pos.x, pos.y);
-
+            
+            pos.y++;
         }
+
+        pos.x++;
     }
 }
 
@@ -335,8 +366,7 @@ void glcdDrawTextPgm(PGM_P text, const xy_point p, const font* f, void (*drawPx)
     i = 0;
 
     /* load string from PGM */
-    memcpy_P(&txt_p, &text, sizeof (PGM_P));
-    strcpy_P(buff, txt_p);
+    strcpy_P(buff, text);
 
     while(buff[i] != '\0'){
         if(buff[i] == '\n'){
