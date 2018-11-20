@@ -57,7 +57,7 @@ typedef enum{
 const char sync_txt[] PROGMEM = "Please press sync!";
 const char connect_txt[] PROGMEM = "connecting...";
 
-PGM_P const wii_init_table[] PROGMEM = 
+PGM_P const wii_init_table[] = 
 {
     sync_txt,
     connect_txt

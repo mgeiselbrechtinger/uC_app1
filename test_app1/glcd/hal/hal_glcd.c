@@ -46,8 +46,9 @@
 #define DISP_OFF	(0)
 
 #define NOP()           asm volatile( "nop\n\t" ::);    /* 62.5ns delay */
-#define SET_UP_DELAY()  asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 140ns delay */
-#define HOLD_DELAY()    asm volatile( "nop\n\t" ::);  /* > 450ns delay */
+#define SET_UP_DELAY()  asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 200ns delay */
+#define DATA_RDY_DELAY() asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 320ns delay */
+#define HOLD_DELAY()    asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::);  /* > 450ns delay */
 
 /* global variables */
 typedef struct{
@@ -99,16 +100,24 @@ uint8_t halGlcdInit(void)
     CTRL_PORT &= ~(1 << RW_PIN);
     CTRL_PORT &= ~(1 << E_PIN); 
     CTRL_PORT &= ~(1 << RS_PIN);
-    CTRL_PORT |=  (1 << RST_PIN);
+    CTRL_PORT &= ~(1 << RST_PIN); 
     CTRL_DDR  |=  (1 << CS1_PIN) | (1 << CS2_PIN) | (1<< RW_PIN) | (1 << E_PIN) | (1 << RS_PIN) | (1 << RST_PIN);
+	
+	/* wait 1us befor pulling reset high */
+	HOLD_DELAY()
+	HOLD_DELAY()
+	HOLD_DELAY()
+	CTRL_PORT |= (1 << RST_PIN);
 
     /* turn on controller 0 */
     halGlcdCtrlWriteCmd(CONTROLLER0, DISP_CMD, DISP_ON);
     halGlcdCtrlWriteCmd(CONTROLLER0, START_CMD, START_LINE);
+	halGlcdCtrlBusyWait();
 
     /* turn on controller 1 */
     halGlcdCtrlWriteCmd(CONTROLLER1, DISP_CMD, DISP_ON);
     halGlcdCtrlWriteCmd(CONTROLLER1, START_CMD, START_LINE);
+	halGlcdCtrlBusyWait();
 
     /* clear Screen */
     halGlcdFillScreen(0x00);
@@ -207,13 +216,13 @@ static void halGlcdCtrlSetCmd(const display_cmd_t cmd, const uint8_t data)
 
 static void halGlcdCtrlEnableCmd(void)
 {
-    //    SET_UP_DELAY()
+    SET_UP_DELAY()
 
     CTRL_PORT |= (1 << E_PIN);
 
     HOLD_DELAY()
 
-        CTRL_PORT &= ~(1 << E_PIN);
+    CTRL_PORT &= ~(1 << E_PIN);
 }
 
 uint8_t halGlcdSetAddress(const uint8_t xCol, const uint8_t yPage)

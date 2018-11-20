@@ -1,12 +1,13 @@
 #include	<avr/io.h>
+#include	<avr/sleep.h>
 #include	<avr/interrupt.h>
 #include	<stdint.h>
 
-#include        "./music/music.h"
+#include    "./music/music.h"
 #include	"./adc/adc.h"
 #include	"./menu/menu.h"
-#include        "./glcd/glcd_user/glcd.h"
-//#include	"./libglcd/glcd.h"
+
+#include	"./glcd_user/glcd.h"
 
 static void game_tick_init(void)
 {
@@ -20,28 +21,32 @@ static void game_tick_init(void)
 
 int main(void)
 {
-    // TODO debug
-    PORTK = 0;
-    DDRK = 0xff;
-    PORTL = 0;
-    DDRL = 0xff;
+	// TODO debug
+	PORTL = 0;
+	DDRK = 0xff;
 
-    // TODO use menu_init();
-    adcInit();
-    music_init();
+	/* initializations */
+    //adcInit();
+    //music_init();
     glcdInit();
-    menu_init();
+	menu_init();
     game_tick_init();
+	set_sleep_mode(SLEEP_MODE_IDLE);
+	PORTL = 0;
     sei();
 
-    // TODO turn on music and goto sleep
     for(;;){
-        music_bt();
+		/* play music in background */
+        //music_bt();
+		/* go to sleep */
+		sleep_enable();
+		sleep_cpu();
     }
 }
 
 ISR(TIMER3_COMPA_vect)
 {
     sei();
+	/* update gameplay */
     menu_fn();
 }

@@ -9,8 +9,8 @@
 #include    "../libwiimote/wii_user.h"
 //#include    "../libglcd/glcd.h"
 //#include    "../font/Standard5x7.h"
-#include    "../glcd/font/Standard5x7.h"
-#include    "../glcd/glcd_user/glcd.h"
+#include    "./font/Standard5x7.h"
+#include    "./glcd_user/glcd.h"
 
   //////////////////////
  /* global variables */
@@ -187,16 +187,23 @@ static void wii_init_fn(void)
 {
 
     if(wii_init_state == I_INIT){
-        error_t status;
+        PORTK |= 1;
+		error_t status;
         uint8_t i;
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
-
-        glcdFillScreen(GLCD_CLEAR);
-        for(i = 0; i < WII_INIT_TABLE_LEN; i++){
+        
+		glcdFillScreen(GLCD_CLEAR);
+		
+        glcdDrawTextPgm(wii_init_table[0], p, &Standard5x7, &glcdSetPixel);
+		p.y += YLINE_TXT;
+        glcdDrawTextPgm(wii_init_table[1], p, &Standard5x7, &glcdSetPixel);
+        /*
+		for(i = 0; i < WII_INIT_TABLE_LEN; i++){
             glcdDrawTextPgm(wii_init_table[i], p, &Standard5x7, &glcdSetPixel);
             p.y += YLINE_TXT;
         }
-
+		*/
+		PORTK |= 4;
         wii_data.conn_status = 0;
         wii_data.conn_flag = 0;
 
@@ -207,7 +214,7 @@ static void wii_init_fn(void)
 
 
     }else if(wii_init_state == I_DISCONNECTED){
-
+		PORTK |= 2;
         /* try connection to wii */
         if(wii_data.conn_flag == 0){
             wiiUserConnect(wii_nr, wii_mac, &wii_conn_callback);
@@ -236,7 +243,7 @@ static void wii_init_fn(void)
 static void home_fn(void)
 {
     if(home_state == I_INIT){
-
+		PORTK |= 8;
         uint8_t i;
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
 
