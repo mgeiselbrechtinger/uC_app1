@@ -53,6 +53,7 @@ typedef enum{
     I_IDLE,
 } I_STATE;
 
+
 #define WII_INIT_TABLE_LEN (2)
 const char sync_txt[] PROGMEM = "Please press sync!";
 const char connect_txt[] PROGMEM = "connecting...";
@@ -75,6 +76,7 @@ PGM_P const menu_table[] PROGMEM =
     menu_sel_txt
 };
 
+#define USER_LINE_LEN (10)
 #define USER_NAME_LEN (9*6)
 #define USER_SELECT_TABLE_LEN (6)
 const char  sel0_txt[] PROGMEM = "Player 0";

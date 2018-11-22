@@ -1,12 +1,10 @@
 // TODO:
-// remove sd card while playing music
-// remove wiimote while playing
+// remove sdcard, not supported
+// remove wiimote, callback seems to be not called
 // draw player select table from PGM
-// test new ball drawing algorithm
-// test highscore board
+// test highscore board, cant print up down??
 // try different optimization modes 
 // ask if timer for bt reset and game ticks are ok
-// ask about strlen on constant strings
 
 #include    <avr/io.h>
 #include    <stdint.h>
@@ -23,6 +21,8 @@
 //////////////////////
 /* global variables */
 //////////////////////
+
+uint8_t game_enable;
 
 /* state data */
 static M_STATE menu_state;
@@ -61,7 +61,7 @@ typedef struct game_hs_t{
     uint16_t score;
 } game_highscore_t;
 
-static game_highscore_t game_highscore[HS_TABLE_LEN];
+static game_highscore_t game_highscore[5];
 
 /* yshift data */
 typedef struct{
@@ -169,6 +169,8 @@ void menu_init(void)
 
     /* reset highscore table */
     memset(&game_highscore, 0, sizeof game_highscore);
+
+    game_enable = 1;
 }
 
 /**
@@ -178,6 +180,8 @@ void menu_init(void)
  */
 void menu_fn(void)
 {
+    game_enable = 1;
+
     switch(menu_state){
 
         case M_WII_INIT:
@@ -209,6 +213,8 @@ void menu_fn(void)
 
             break;
     }
+
+    game_enable = 1;
 }
 
 /**
@@ -220,16 +226,16 @@ static void wii_init_fn(void)
 {
 
     if(wii_init_state == I_INIT){
-        error_t status;
-        uint8_t i;
+        
+        error_t status; 
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
 
         glcdFillScreen(GLCD_CLEAR);
-        for(i = 0; i < WII_INIT_TABLE_LEN; i++){
-            glcdDrawTextPgm(wii_init_table[i], p, &Standard5x7, &glcdSetPixel);
-            p.y += YLINE_TXT;
-        }
-
+        
+        glcdDrawTextPgm(wii_init_table[0], p, &Standard5x7, &glcdSetPixel);
+        p.y += YLINE_TXT;
+        glcdDrawTextPgm(wii_init_table[1], p, &Standard5x7, &glcdSetPixel);
+        
         wii_data.conn_status = 0;
         wii_data.conn_flag = 0;
 
@@ -259,7 +265,7 @@ static void wii_init_fn(void)
             menu_state = M_HOME;
 
         }else{
-            wii_init_state = I_DISCONNECTED;
+            wii_init_state = I_INIT;
 
         }
     }
@@ -275,22 +281,19 @@ static void home_fn(void)
 {
     if(home_state == I_INIT){
 
-        uint8_t i;
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
-
         glcdFillScreen(GLCD_CLEAR);
+
         /* print title */
-        i = 0;
-        p.x += 13; 
-        glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
+        p.x += 10; 
+        glcdDrawTextPgm(menu_table[0], p, &Standard5x7, &glcdSetPixel);
         p.x = XSTART_TXT;
         p.y += 3*YLINE_TXT;
-        /* print menu */
-        for(i = 1; i < MENU_TABLE_LEN; i++){
-            glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
-            p.y += YLINE_TXT;
-        }
-
+        /* print menu text */ 
+        glcdDrawTextPgm(menu_table[1], p, &Standard5x7, &glcdSetPixel);
+        p.y += YLINE_TXT;
+        glcdDrawTextPgm(menu_table[2], p, &Standard5x7, &glcdSetPixel);
+        
         home_state = I_IDLE;
         wii_data.button_l = 0;
 
@@ -329,17 +332,18 @@ static void hs_table_fn(void)
         glcdFillScreen(GLCD_CLEAR);
 
         /* print highscore only if biggr 0 */
-        for(i = HS_TABLE_LEN - 1; i > 0; i--){
+        for(i = 0; i < 5; i++){
             /* append score to name */
             if(game_highscore[i].score > 0){
                 memset(txt_buff, HS_ASCII_SPACE, HS_LINE_LEN);
-                strcpy_P(txt_buff, (PGM_P)pgm_read_word(&(hs_table[game_highscore[i].player])));
-                sprintf((txt_buff + HS_NAME_LEN), "%u", game_highscore[i].score);
+                strncpy_P(txt_buff, (PGM_P)pgm_read_word(&(hs_table[game_highscore[i].player])), HS_NAME_LEN);
+                snprintf((txt_buff + HS_NAME_LEN), HS_SCORE_LEN, "%u", game_highscore[i].score);
                 glcdDrawText(txt_buff, p, &Standard5x7, &glcdSetPixel);
+                p.y += YLINE_TXT;
             }
-            p.y += YLINE_TXT;
         }
-
+        
+        p.y = 6*YLINE_TXT;
         /* draw return field */
         glcdDrawTextPgm(hs_table[HS_TABLE_LEN], p, &Standard5x7, &glcdSetPixel);
 
@@ -375,14 +379,16 @@ static void player_select_fn(void)
         xy_point p  = { .x = XSTART_TXT, .y = YSTART_TXT };
 
         glcdFillScreen(GLCD_CLEAR);
-
+     
+        /* cannot use glcdDrawTextPgm in loop */   
         for(i = 0; i < USER_SELECT_TABLE_LEN; i++){
-            strcpy_P(txt_buff, (PGM_P)pgm_read_word(&(user_select_table[i])));
+            strncpy_P(txt_buff, (PGM_P)pgm_read_word(&(user_select_table[i])), USER_LINE_LEN);
             glcdDrawText(txt_buff, p, &Standard5x7, &glcdSetPixel);
             p.y += YLINE_TXT;
         }
-
+        
         player_select_state = I_SELECT;
+        
         wii_data.button_h = 0;
         wii_data.button_l = 0;
         game_player = 0;
@@ -798,22 +804,30 @@ static void game_draw_ball(const xy_point lower_left, void (*drawPx)(const uint8
     right.x = lower_left.x + 4;
     right.y = lower_left.y;
 
+    //if(lower_left.y <= YEND)
     glcdDrawLine(left, right, drawPx);
 
     left.x--;
     left.y--;
     right.x++;
-    right.y -= 2;
+    right.y--;
 
-    glcdFillRect(left, right, drawPx);
+    //if(lower_left.y <= YEND)
+    glcdDrawLine(left, right, drawPx);
+
+    left.y--;
+    right.y--;
+
+    //if(lower_left.y <= YEND)
+    glcdDrawLine(left, right, drawPx);
 
     left.x++;
-    left.y -= 2;
+    left.y--;
     right.x--;
     right.y--;
 
+    //if(lower_left.y <= YEND)
     glcdDrawLine(left, right, drawPx);
-
 }
 
 /**

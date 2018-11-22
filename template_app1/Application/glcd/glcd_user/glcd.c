@@ -43,7 +43,7 @@ void glcdInit(void)
 void glcdSetPixel(const uint8_t x, const uint8_t y)
 {
     uint8_t page_address, page_data, pixel;
-
+    
     page_address = y/PAGE_SIZE;
     pixel = y & PAGE_MOD;
 
@@ -66,7 +66,7 @@ void glcdSetPixel(const uint8_t x, const uint8_t y)
 void glcdClearPixel(const uint8_t x, const uint8_t y)
 {    
     uint8_t page_address, page_data, pixel;
-
+    
     page_address = y/PAGE_SIZE;
     pixel = y & PAGE_MOD;
 
@@ -89,7 +89,7 @@ void glcdClearPixel(const uint8_t x, const uint8_t y)
 void glcdInvertPixel(const uint8_t x, const uint8_t y)
 {    
     uint8_t page_address, page_data, pixel;
-
+    
     page_address = y/PAGE_SIZE;
     pixel = y & PAGE_MOD;
 
@@ -117,7 +117,7 @@ static void glcdDrawLineLow(const xy_point p1, const xy_point p2, void (*drawPx)
 
     dx = p2.x - p1.x;
     dy = p2.y - p1.y;
-
+    
     yi = 1;
     if(dy < 0){
         yi = -1;
@@ -153,7 +153,7 @@ static void glcdDrawLineHigh(const xy_point p1, const xy_point p2, void (*drawPx
 
     dx = p2.x - p1.x;
     dy = p2.y - p1.y;
-
+    
     xi = 1;
     if(dx < 0){
         xi = -1;
@@ -189,7 +189,7 @@ void glcdDrawLine(const xy_point p1, const xy_point p2, void (*drawPx)(const uin
             glcdDrawLineLow(p2, p1, drawPx);
         else
             glcdDrawLineLow(p1, p2, drawPx);
-
+    
     }else{
         if(p1.y > p2.y)
             glcdDrawLineHigh(p2, p1, drawPx);
@@ -207,66 +207,66 @@ void glcdDrawLine(const xy_point p1, const xy_point p2, void (*drawPx)(const uin
  */
 void glcdDrawRect(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
-    uint8_t dx, dy;
-    uint8_t x_start, y_start, x_end, y_end;
+	uint8_t dx, dy;
+	uint8_t x_start, y_start, x_end, y_end;
     xy_point p_start, p_end;
+    
+	/* sort coordinates */
+	if(p1.x < p2.x){
+		p_start.x = p1.x;
+		p_end.x = p2.x;
+	}else{
+		p_start.x = p2.x;
+		p_end.x = p1.x;
+	}
 
-    /* sort coordinates */
-    if(p1.x < p2.x){
-        p_start.x = p1.x;
-        p_end.x = p2.x;
-    }else{
-        p_start.x = p2.x;
-        p_end.x = p1.x;
-    }
+	if(p1.y < p2.y){
+		p_start.y = p1.y;
+		p_end.y = p2.y;
+	}else{
+		p_start.y = p2.y;
+		p_end.y = p1.y;
+	}
 
-    if(p1.y < p2.y){
-        p_start.y = p1.y;
-        p_end.y = p2.y;
-    }else{
-        p_start.y = p2.y;
-        p_end.y = p1.y;
-    }
+	dx = p_end.x - p_start.x;
+	dy = p_end.y - p_start.y;
+	
+	x_start = p_start.x;
+	y_start = p_start.y;
+	x_end = p_end.x;
+	y_end = p_end.y;
 
-    dx = p_end.x - p_start.x;
-    dy = p_end.y - p_start.y;
+	/* draw upper horizontal line */
+	p_end.y = y_start;
+	glcdDrawLine(p_start, p_end, drawPx);
+	
+	/* draw vertical lines */
+	if(dy > 1){
+		p_start.y = y_start + 1;
+		p_end.x = x_start;
+		p_end.y = y_end - 1;
+		
+		glcdDrawLine(p_start, p_end, drawPx); 
+		
+		/* draw second vertical line */
+		if(dx > 0){
+			p_start.x = x_end;
+			p_end.x = x_end;
 
-    x_start = p_start.x;
-    y_start = p_start.y;
-    x_end = p_end.x;
-    y_end = p_end.y;
+			glcdDrawLine(p_start, p_end, drawPx);
+		}
+	}
 
-    /* draw upper horizontal line */
-    p_end.y = y_start;
-    glcdDrawLine(p_start, p_end, drawPx);
+	/* draw lower horizontal line */
+	if(dy > 0){
+		p_start.x = x_start;
+		p_start.y = y_end;
+		p_end.y = y_end;
 
-    /* draw vertical lines */
-    if(dy > 1){
-        p_start.y = y_start + 1;
-        p_end.x = x_start;
-        p_end.y = y_end - 1;
-
-        glcdDrawLine(p_start, p_end, drawPx); 
-
-        /* draw second vertical line */
-        if(dx > 0){
-            p_start.x = x_end;
-            p_end.x = x_end;
-
-            glcdDrawLine(p_start, p_end, drawPx);
-        }
-    }
-
-    /* draw lower horizontal line */
-    if(dy > 0){
-        p_start.x = x_start;
-        p_start.y = y_end;
-        p_end.y = y_end;
-
-        glcdDrawLine(p_start, p_end, drawPx);
-    }
+		glcdDrawLine(p_start, p_end, drawPx);
+	}
 }
-
+    
 /**
  * Fills screen with pattern
  *
@@ -320,7 +320,7 @@ void glcdDrawCircle(const xy_point c, const uint8_t radius, void (*drawPx)(const
         drawPx(c.x-y, c.y-x);   /*  II. Quadrant */
         drawPx(c.x+x, c.y-y);   /* III. Quadrant */
         drawPx(c.x+y, c.y+x);   /*  IV. Quadrant */
-
+    
         r = err;
 
         /* update y */       
@@ -347,7 +347,7 @@ void glcdDrawCircle(const xy_point c, const uint8_t radius, void (*drawPx)(const
 void glcdDrawVertical(const uint8_t x, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
     uint8_t y;
-
+    
     for(y = Y_START; y <= Y_END; y++)    
         drawPx(x, y);
 
@@ -362,7 +362,7 @@ void glcdDrawVertical(const uint8_t x, void (*drawPx)(const uint8_t x, const uin
 void glcdDrawHorizontal(const uint8_t y, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
     uint8_t x;
-
+    
     for(x = X_START; x <= X_END; x++)    
         drawPx(x, y);
 
@@ -378,12 +378,12 @@ void glcdDrawHorizontal(const uint8_t y, void (*drawPx)(const uint8_t x, const u
 void glcdFillRect(const xy_point p1, const xy_point p2, void (*drawPx)(const uint8_t x, const uint8_t y))
 {
     xy_point p_start, p_end, p_tmp;
-
+    
     /* sort x coordinate */
     if(p2.x < p1.x){
         p_start.x = p2.x;
         p_end.x = p1.x;
-
+    
     }else{
         p_start.x = p1.x;
         p_end.x = p2.x;
@@ -392,12 +392,12 @@ void glcdFillRect(const xy_point p1, const xy_point p2, void (*drawPx)(const uin
     if(p2.y < p1.y){
         p_start.y = p2.y;
         p_end.y = p1.y;
-
+    
     }else{
         p_start.y = p1.y;
         p_end.y = p2.y;
     }
-
+    
     p_tmp.x = p_end.x;
 
     for(; p_start.y < p_end.y; p_start.y++){
@@ -433,22 +433,22 @@ void glcdDrawChar(const char c, const xy_point p, const font* f, void (*drawPx)(
     c_p = f->font;
     c_p += f->width * offset;
     pos.x = p.x;
-    pos.y = p.y - f->height;
+    pos.y = p.y;
 
     /* for each byte in x direction */
     for(i = 0; i < f->width; i++){
         /* load byte from program memory */
         data = pgm_read_byte(c_p + i);
-
+        
         pos.y = p.y;
 
         /* for each bit in y direction */
         for(j = 0; j < f->height; j++){
-
+            
             /* draw bit if set */
             if(data & (1 << j))
                 drawPx(pos.x, pos.y);
-
+            
             pos.y++;
         }
 
@@ -469,20 +469,20 @@ void glcdDrawText(const char *text, const xy_point p, const font* f, void (*draw
 {
     xy_point pos;
     uint8_t i;
-
+    
     pos.x = p.x;
-    pos.y = p.y - f->height;
+    pos.y = p.y;
     i = 0;
 
     while(text[i] != '\0'){
-        /* carriage return and newline */
+		/* carriage return and newline */
         if(text[i] == '\n'){
-            pos.x = p.x;
+			pos.x = p.x;
             pos.y += f->lineSpacing;
-
+        
         }else{
             glcdDrawChar(text[i], pos, f, drawPx); 
-
+        
             pos.x += f->charSpacing;
         }
 
@@ -504,7 +504,7 @@ void glcdDrawTextPgm(PGM_P text, const xy_point p, const font* f, void (*drawPx)
     /* load string from PGM */
     char buff[32]; 
     strncpy_P(buff, text, 32);
-
-    glcdDrawText(buff, p, f, drawPx);
+	
+	glcdDrawText(buff, p, f, drawPx);
 
 }

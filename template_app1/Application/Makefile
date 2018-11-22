@@ -4,7 +4,7 @@ LD := $(CC)
 AVRPROG2 := avrprog2
 
 CFLAGS   := -mmcu=atmega1280
-CCFLAGS  := -std=gnu99 -Wall -Wno-main -O2 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+CCFLAGS  := -std=gnu99 -Wall -Wno-main -O2 -funsigned-char -funsigned-bitfields -fshort-enums -fpack-struct 
 CPPFLAGS := -I. -I./menu -I./libglcd -I./libwiimote -I./libsdcard -I./libmp3 -I./music -I./adc -I./rand
 LDFLAGS  := -L. -L./libglcd -L./libwiimote -L./libmp3 -L./libsdcard
 
@@ -27,4 +27,4 @@ install: main.elf
 
 .PHONY: clean
 clean:
-	rm -f main.elf main.o adc/adc.o libsdcard/spi.o libwiimote/hal_wt41_fc_uart.o menu/menu.o music/music.o rand/rand.o
+	rm -f main.elf $(OBJS)

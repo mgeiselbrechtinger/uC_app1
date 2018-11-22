@@ -1,6 +1,9 @@
 #ifndef MENU_H
 #define MENU_H
 
+/* shared variables */
+extern uint8_t game_enable;
+
 /* menu prototype */
 
 /**

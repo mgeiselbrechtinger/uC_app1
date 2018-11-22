@@ -1,47 +1,45 @@
-#include	<avr/io.h>
-#include	<avr/sleep.h>
-#include	<avr/interrupt.h>
-#include	<stdint.h>
+#include    <avr/io.h>
+#include    <avr/sleep.h>
+#include    <avr/interrupt.h>
+#include    <stdint.h>
 
 #include    "./music/music.h"
-#include	"./adc/adc.h"
-#include	"./menu/menu.h"
-#include	"./libglcd/glcd.h"
+#include    "./adc/adc.h"
+#include    "./menu/menu.h"
+#include    "./libglcd/glcd.h"
 
-static void game_tick_init(void)
-{
-    /* setup TIMER3: 20Hz game ticks */
-    TIMSK3 |= (1 << OCIE3A);
-    TCNT3 = 0;
-    OCR3A = 3125;
-    TCCR3A = 0;
-    TCCR3B = (1 << WGM32) | (1 << CS32);
-}
-
+/**
+ * Main function
+ *
+ * @brief: Initializes required modules and starts game
+ *         plays music as background task
+ */
 int main(void)
 {
-	/* initializations */
+    /* initializations */
     adcInit();
     music_init();
     glcdInit();
-	menu_init();
-    game_tick_init();
-	set_sleep_mode(SLEEP_MODE_IDLE);
+    menu_init();
 
+    set_sleep_mode(SLEEP_MODE_IDLE);
+    
     sei();
 
     for(;;){
-		/* play music in background */
+        /* play music in background */
         music_bt();
-		/* go to sleep */
-		sleep_enable();
-		sleep_cpu();
+        /* go to sleep */
+        sleep_mode();
     }
 }
 
+/**
+ * 5ms timer interrupt
+ */
 ISR(TIMER3_COMPA_vect)
 {
     sei();
-	/* update gameplay */
+    /* update gameplay */
     menu_fn();
 }

@@ -6,7 +6,10 @@
 #include    "./music/music.h"
 #include    "./adc/adc.h"
 #include    "./menu/menu.h"
-#include    "./libglcd/glcd.h"
+#include    "./glcd/glcd_user/glcd.h"
+
+
+uint8_t game_timer;
 
 /**
  * Main function
@@ -23,24 +26,26 @@ int main(void)
     menu_init();
 
     set_sleep_mode(SLEEP_MODE_IDLE);
-
+    
     sei();
 
     for(;;){
+        /* call game play every 50ms */
+        if(game_enable == 1 && game_timer == 1){
+            game_timer = 0;
+            menu_fn();
+        }
         /* play music in background */
         music_bt();
         /* go to sleep */
-        sleep_enable();
-        sleep_cpu();
+        sleep_mode();
     }
 }
 
 /**
- * 5ms timer interrupt
+ * 50ms timer interrupt
  */
 ISR(TIMER3_COMPA_vect)
 {
-    sei();
-    /* update gameplay */
-    menu_fn();
+    game_timer = 1; 
 }

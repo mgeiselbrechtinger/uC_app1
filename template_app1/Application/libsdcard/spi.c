@@ -3,42 +3,54 @@
 
 #include    "./spi.h"
 
+/**
+ * Initializes hardware for SPI
+ */
 void spiInit(void)
 {
-    // clear pull-up's
-    PORTB &= (1 << PB6) | (1 << PB7);
-    // set MOSI, SCK and MP3_CS output
-    DDRB  |= (1 << PB0) | (1 << PB1) | (1 << PB2);
-    // set DREQ as input
-    PORTD &= ~(1 << PD0);
-    DDRD  &= ~(1 << PD0);
-    // set MMC_CS as output
-    PORTG &= ~(1 << PG1);
-    DDRG  |=  (1 << PG1);
-	// dissable double speed
+    /* port initialization */
+    PORTB &= ~((1 << PB3) | (1 << PB2) | (1 << PB1));
+    /* set MOSI, SCK and SS as output */
+    DDRB  |= (1 << PB2) | (1 << PB1) | (1 << PB0);
+    /* set MISO as input */
+    DDRB &= ~(1 << PB3);
+    /* dissable double speed */
     SPSR &= ~(1<< SPI2X);
-    // enable SPI, mode 0, MSB first
+    /* enable SPI, mode 0, MSB first */
     SPCR = (1 << SPE) | (1 << MSTR);
 }
 
+/**
+ * Sends data over SPI
+ *
+ * @param: data, byte that has to be send
+ */
 void spiSend(uint8_t data)
 {
     SPDR = data;
-    // busy wait (allowed)
+    /* busy wait till sent, (allowed) */
     while(!(SPSR & (1 << SPIF)))
         ;
 }
 
+/**
+ * Receives data over SPI
+ *
+ * @return: byte that has been received
+ */
 uint8_t spiReceive(void)
 {
-    // send dummypattern to SD while receiving
+    /* send dummy pattern to sdcard while receiving */
     SPDR = 0xFF;
-    // busy wait (allowed)
+    /* busy wait till received, (allowed) */
     while(!(SPSR & (1 << SPIF)))
         ;
     return SPDR;
 }
 
+/**
+ * Sets prescaler of SPI
+ */
 void spiSetPrescaler(spi_prescaler_t prescaler)
 {
     SPCR &= ~((1 << SPR0) | (1 << SPR1));

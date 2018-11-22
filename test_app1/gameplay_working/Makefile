@@ -4,13 +4,13 @@ LD := $(CC)
 AVRPROG2 := avrprog2
 
 CFLAGS   := -mmcu=atmega1280
-CCFLAGS  := -std=gnu99 -Wall -Wno-main -O2 -funsigned-char -funsigned-bitfields -fshort-enums -fpack-struct 
-CPPFLAGS := -I. -I./menu -I./libglcd -I./libwiimote -I./libsdcard -I./libmp3 -I./music -I./adc -I./rand
-LDFLAGS  := -L. -L./libglcd -L./libwiimote -L./libmp3 -L./libsdcard
+CCFLAGS  := -std=gnu99 -Wall -Wno-main -funsigned-char -funsigned-bitfields -fshort-enums -fpack-struct #-O2
+CPPFLAGS := -I. -I./menu -I./libwiimote -I./libsdcard -I./libmp3 -I./music -I./adc -I./rand -I./glcd/hal -I./glcd/glcd_user -I.glcd/font -I./libglcd
+LDFLAGS  := -L. -L./libwiimote -L./libmp3 -L./libsdcard -L./libglcd 
 
-OBJS	 := main.o menu/menu.o libwiimote/hal_wt41_fc_uart.o libsdcard/spi.o music/music.o adc/adc.o rand/rand.o
-LIBS	 := -lglcd -lwiimote -lmp3 -lsdcard
-LIBDEPS	 := libglcd/libglcd.a libwiimote/libwiimote.a libmp3/libmp3.a libsdcard/libsdcard.a
+OBJS	 := main.o menu/menu.o libwiimote/hal_wt41_fc_uart.o libsdcard/spi.o music/music.o adc/adc.o rand/rand.o glcd/hal/hal_glcd.o glcd/glcd_user/glcd.o glcd/font/Standard5x7.o
+LIBS	 := -lwiimote -lmp3 -lsdcard #-lglcd
+LIBDEPS	 := libwiimote/libwiimote.a libmp3/libmp3.a libsdcard/libsdcard.a #libglcd/libglcd.a 
 
 .PHONY: all
 all: main.elf

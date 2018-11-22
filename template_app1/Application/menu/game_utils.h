@@ -9,8 +9,8 @@
 #define XMID        (XEND/2)
 #define YSTART      (63)
 #define YEND        (0)
-#define YLEN		(64)
-#define YMOD		(63)
+#define YLEN	    (64)
+#define YMOD	    (63)
 #define XSTART_TXT  (3)
 #define	YSTART_TXT  (10)
 #define YLINE_TXT   (10)
@@ -27,7 +27,7 @@
 #define BUTTON_2	(0x01)
 #define	BUTTON_A	(0x08)
 #define	BUTTON_B	(0x04)
-#define	BUTTON_MINUS (0x10)
+#define	BUTTON_MINUS    (0x10)
 #define BUTTON_HOME	(0x80)
 
 #define	TILT_LEFT	(110)
@@ -75,6 +75,7 @@ PGM_P const menu_table[] PROGMEM =
     menu_sel_txt
 };
 
+#define USER_LINE_LEN (10)
 #define USER_NAME_LEN (9*6)
 #define USER_SELECT_TABLE_LEN (6)
 const char  sel0_txt[] PROGMEM = "Player 0";
@@ -95,7 +96,11 @@ PGM_P const user_select_table[] PROGMEM =
     ret_txt
 };
 
-#define HS_TABLE_LEN (6)
+#define HS_NAME_LEN (9)
+#define HS_SCORE_LEN (5)
+#define HS_LINE_LEN (HS_NAME_LEN + HS_SCORE_LEN + 1)
+#define HS_ASCII_SPACE (32)
+#define HS_TABLE_LEN (5)
 const char  hs0_txt[] PROGMEM = "Player0: ";
 const char  hs1_txt[] PROGMEM = "Player1: ";
 const char  hs2_txt[] PROGMEM = "Player2: ";
@@ -123,10 +128,10 @@ const uint8_t game_platform_templates[GAME_PLATFORM_NR][GAME_PLATFORM_COORDS] = 
     {8, 44, 52, 100, 108, 127},
     {0, 66, 75, 111, 120, 127}, 
     {0, 20, 29, 88, 110, 127},
-	{0, 0, 0, 0, 20, 118},
-	{0, 0, 15, 70, 100, 127},
-	{0, 0, 0, 0, 21, 127},
-	{0, 0, 0, 0, 0, 106},
+    {0, 0, 0, 0, 20, 118},
+    {0, 0, 15, 70, 100, 127},
+    {0, 0, 0, 0, 21, 127},
+    {0, 0, 0, 0, 0, 106},
 };
 
 

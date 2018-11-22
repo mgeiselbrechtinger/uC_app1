@@ -10,8 +10,8 @@ void spiInit(void)
 {
     /* port initialization */
     PORTB &= ~((1 << PB3) | (1 << PB2) | (1 << PB1));
-    /* set MOSI and SCK as output */
-    DDRB  |= (1 << PB2) | (1 << PB1);
+    /* set MOSI, SCK and SS as output */
+    DDRB  |= (1 << PB2) | (1 << PB1) | (1 << PB0);
     /* set MISO as input */
     DDRB &= ~(1 << PB3);
     /* dissable double speed */

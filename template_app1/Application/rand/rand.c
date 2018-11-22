@@ -5,11 +5,22 @@
 #define POLYH   (0x80)
 #define POLYL   (0xE3)
 
+/* linear feedback shift register state */
 static uint16_t lfsr = 1;
 
+/* implementations */
+
+/**
+ * Shifts the LSB of in to the LFSR and returns the MSB
+ *
+ * @param: in, lsb gets shifted in lfsr
+ * @return: lsb holds random bit of lfsr
+ * @globals: lfsr
+ */
 uint8_t rand_shift(uint8_t in)
 {
     uint8_t out;
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
         asm volatile ("\n"
             "mov    r16, %A[lfsr]"      "\n\t"
@@ -31,25 +42,52 @@ uint8_t rand_shift(uint8_t in)
             : "r16" 
         );
     }
+
     return out;
 }
 
+/**
+ * Feeds the random LSB to the LFSR
+ *
+ * @param: in, lsb gets shifted in lfsr
+ */
 void rand_feed(uint8_t in)
 {
     rand_shift(in);
 }
 
-uint8_t rand1()
+/**
+ * Returns one random bit in LSB
+ *
+ * @return: lsb hold random bit of lfsr
+ */
+uint8_t rand1(void)
 {
     return rand_shift(0);
 }
 
-uint16_t rand16()
+/**
+ * Generates random 8bit nuber
+ *
+ * @return: a 8bit random number
+ */
+uint8_t rand8(void)
 {
-    uint16_t num = 0;
-    for(uint8_t i = 0; i < 15; i++){
+    uint8_t i, num = 0;
+    
+    for(i = 0; i < 7; i++){
         num |= (rand_shift(0) << i);
     }
+
     return num;
-    
+}
+
+/**
+ * Generates random 16bit number
+ *
+ * @return: a 16bit random number
+ */
+uint16_t rand16(void)
+{
+    return (rand8() << 8) | rand8(); 
 }   

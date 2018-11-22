@@ -4,9 +4,24 @@
 #include <stdint.h>
 #include <util.h>
 
+/**
+ * Initializes UART module
+ *
+ * @HW: UART, TIMER1
+ * @param: sndCallback, function called after data has been sent
+ * @param: rcvCallback, function called after data has been received
+ * @return: allways SUCCESS
+ * @globals: rcv_buff, snd_buff, _sndCallback, _rcvCallback
+ */
 error_t halWT41FcUartInit(void (*sndCallback)(), void (*rcvCallback)(uint8_t));
-error_t halWT41FcUartSend(uint8_t byte);
 
-static void rcv_buff_empty(void);
+/**
+ * Sends one byte via UART module
+ *
+ * @param: byte, that gets sent
+ * @return: SUCCESS if byte has been sent, ERROR otherwise
+ * @globals :snd_buff
+ */
+error_t halWT41FcUartSend(uint8_t byte);
 
 #endif
