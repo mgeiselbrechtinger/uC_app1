@@ -1,3 +1,7 @@
+// TODO
+// test program once more
+// added platforms to progmem
+
 #include    <avr/io.h>
 #include    <avr/interrupt.h>
 #include    <stdint.h>
@@ -633,11 +637,14 @@ static void game_draw_random_platform(const uint8_t rand_platform)
 {
     uint8_t i;
     xy_point p1, p2;
+    char platform[GAME_PLATFORM_COORDS];
+
+    memcpy_P(&platform, (PGM_P)pgm_read_word(&(game_platform_templates[rand_platform])), sizeof platform);
 
     for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
-        p1.x = game_platform_templates[rand_platform][i];
+        p1.x = (uint8_t)platform[i];
         p1.y = (game_yshift.value + YSTART) & YMOD;
-        p2.x = game_platform_templates[rand_platform][i+1];
+        p2.x = (uint8_t)platform[i + 1];
         p2.y = (game_yshift.value + YSTART) & YMOD;
         glcdDrawLine(p1, p2, &glcdSetPixel);
     }
@@ -717,6 +724,7 @@ static void game_collision_check(void)
     platform_data_t platform_data;
     uint8_t collision_left, collision_right;
     uint8_t platform_left, platform_right;
+    char platform[GAME_PLATFORM_COORDS];
     uint8_t ball_left, ball_right;
     uint8_t gravity, i;
     int8_t platform_idx;
@@ -735,11 +743,11 @@ static void game_collision_check(void)
     /* platform under ball */
     if(platform_idx != -1){
         platform_data = game_platforms.buff[platform_idx];
-
+        memcpy_P(&platform, (PGM_P)pgm_read_word(&(game_platform_templates[platform_data.platform_nr])), sizeof platform);
         /* check all windows of platform */
         for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
-            platform_left  = game_platform_templates[platform_data.platform_nr][i];
-            platform_right = game_platform_templates[platform_data.platform_nr][i+1];
+            platform_left = (uint8_t)platform[i];
+            platform_right = (uint8_t)platform[i + 1];
 
             /* ball not over window, unset gravity */
             if(ball_right >= platform_left && ball_left <= platform_right){
