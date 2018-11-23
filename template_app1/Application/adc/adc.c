@@ -17,8 +17,8 @@
  */
 void adcInit(void)
 {   
-    // PF0 for volume and PF2-3 for rand seed
-    // turn off all leds and pullups c.f. bigavr man
+    /* PF0 for volume and PF2-3 for rand seed */
+    /* turn off all leds and pullups c.f. bigavr man */
     PORTF = 0;
     DDRF  = 0;
     /* clear power reduction bit */

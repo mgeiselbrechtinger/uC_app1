@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <util.h>
-//#include <wii_bt.h>
 
 #ifndef WII
 #define WII 1

@@ -383,7 +383,7 @@ static void player_select_fn(void)
 
         glcdFillScreen(GLCD_CLEAR);
 
-        /* cannot use glcdDrawTextPgm in loop */   
+        /* glcdDrawTextPgm behaves bad in loop, also with libglcd */   
         for(i = 0; i < USER_SELECT_TABLE_LEN; i++){
             strncpy_P(txt_buff, (PGM_P)pgm_read_word(&(user_select_table[i])), USER_LINE_LEN);
             glcdDrawText(txt_buff, p, &Standard5x7, &glcdSetPixel);
