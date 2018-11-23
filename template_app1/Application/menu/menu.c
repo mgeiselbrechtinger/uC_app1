@@ -1,7 +1,3 @@
-// TODO
-// test program once more
-// added platforms to progmem
-
 #include    <avr/io.h>
 #include    <avr/interrupt.h>
 #include    <stdint.h>
