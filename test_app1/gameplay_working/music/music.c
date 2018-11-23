@@ -31,7 +31,7 @@ void music_set_volume(uint8_t linear_data)
     log_data = (log_data * log_data) >> 8;
     log_data = (log_data * log_data) >> 8;
     log_data = 0xff - log_data;
-
+    
     mp3SetVolume(log_data);
 }
 

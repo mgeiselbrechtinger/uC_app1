@@ -1,12 +1,9 @@
-// TODO:
-// remove sdcard, not supported
-// remove wiimote, callback seems to be not called
-// draw player select table from PGM
-// test highscore board, cant print up down??
-// try different optimization modes 
-// ask if timer for bt reset and game ticks are ok
+// TODO
+// test program once more
+// added platforms to progmem
 
 #include    <avr/io.h>
+#include    <avr/interrupt.h>
 #include    <stdint.h>
 #include    <string.h>
 #include    <stdio.h>
@@ -15,12 +12,14 @@
 #include    "./game_utils.h"
 #include    "../rand/rand.h"
 #include    "../libwiimote/wii_user.h"
-#include    "../libglcd/glcd.h"
-#include    "../font/Standard5x7.h"
+#include    "./glcd/glcd_user/glcd.h"
+#include    "./glcd/font/Standard5x7.h"
 
 //////////////////////
 /* global variables */
 //////////////////////
+
+uint8_t game_timer_flag;
 
 /* state data */
 static M_STATE menu_state;
@@ -167,6 +166,8 @@ void menu_init(void)
 
     /* reset highscore table */
     memset(&game_highscore, 0, sizeof game_highscore);
+    
+    game_timer_flag = 0;
 }
 
 /**
@@ -176,37 +177,51 @@ void menu_init(void)
  */
 void menu_fn(void)
 {
-    switch(menu_state){
+    if(game_timer_flag == 1){
+        game_timer_flag = 0;
 
-        case M_WII_INIT:
+        switch(menu_state){
 
-            wii_init_fn();
-            break;
+            case M_WII_INIT:
 
-        case M_HOME:
+                wii_init_fn();
+                break;
 
-            home_fn();
-            break;
+            case M_HOME:
 
-        case M_HS_TABLE:
+                home_fn();
+                break;
 
-            hs_table_fn();
-            break;
+            case M_HS_TABLE:
 
-        case M_PLAYER_SELECT:
+                hs_table_fn();
+                break;
 
-            player_select_fn();
-            break;
+            case M_PLAYER_SELECT:
 
-        case M_GAME_LOOP:
+                player_select_fn();
+                break;
 
-            game_loop_fn();
-            break;
+            case M_GAME_LOOP:
 
-        default:
+                game_loop_fn();
+                break;
 
-            break;
+            default:
+
+                break;
+        }
     }
+}
+
+/**
+ * 50ms timer interrupt
+ *
+ * @globals: game_timer_flag, enables next game tick
+ */
+ISR(TIMER3_COMPA_vect)
+{
+    game_timer_flag = 1;
 }
 
 /**
@@ -218,15 +233,15 @@ static void wii_init_fn(void)
 {
 
     if(wii_init_state == I_INIT){
-        error_t status;
-        uint8_t i;
+
+        error_t status; 
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
 
         glcdFillScreen(GLCD_CLEAR);
-        for(i = 0; i < WII_INIT_TABLE_LEN; i++){
-            glcdDrawTextPgm(wii_init_table[i], p, &Standard5x7, &glcdSetPixel);
-            p.y += YLINE_TXT;
-        }
+
+        glcdDrawTextPgm(wii_init_table[0], p, &Standard5x7, &glcdSetPixel);
+        p.y += YLINE_TXT;
+        glcdDrawTextPgm(wii_init_table[1], p, &Standard5x7, &glcdSetPixel);
 
         wii_data.conn_status = 0;
         wii_data.conn_flag = 0;
@@ -273,21 +288,18 @@ static void home_fn(void)
 {
     if(home_state == I_INIT){
 
-        uint8_t i;
         xy_point p = { .x = XSTART_TXT, .y = YSTART_TXT };
-
         glcdFillScreen(GLCD_CLEAR);
+
         /* print title */
-        i = 0;
-        p.x += 13; 
-        glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
+        p.x += 10; 
+        glcdDrawTextPgm(menu_table[0], p, &Standard5x7, &glcdSetPixel);
         p.x = XSTART_TXT;
         p.y += 3*YLINE_TXT;
-        /* print menu */
-        for(i = 1; i < MENU_TABLE_LEN; i++){
-            glcdDrawTextPgm(menu_table[i], p, &Standard5x7, &glcdSetPixel);
-            p.y += YLINE_TXT;
-        }
+        /* print menu text */ 
+        glcdDrawTextPgm(menu_table[1], p, &Standard5x7, &glcdSetPixel);
+        p.y += YLINE_TXT;
+        glcdDrawTextPgm(menu_table[2], p, &Standard5x7, &glcdSetPixel);
 
         home_state = I_IDLE;
         wii_data.button_l = 0;
@@ -337,7 +349,7 @@ static void hs_table_fn(void)
                 p.y += YLINE_TXT;
             }
         }
-        
+
         p.y = 6*YLINE_TXT;
         /* draw return field */
         glcdDrawTextPgm(hs_table[HS_TABLE_LEN], p, &Standard5x7, &glcdSetPixel);
@@ -374,16 +386,16 @@ static void player_select_fn(void)
         xy_point p  = { .x = XSTART_TXT, .y = YSTART_TXT };
 
         glcdFillScreen(GLCD_CLEAR);
-     
+
         /* cannot use glcdDrawTextPgm in loop */   
         for(i = 0; i < USER_SELECT_TABLE_LEN; i++){
             strncpy_P(txt_buff, (PGM_P)pgm_read_word(&(user_select_table[i])), USER_LINE_LEN);
             glcdDrawText(txt_buff, p, &Standard5x7, &glcdSetPixel);
             p.y += YLINE_TXT;
         }
-        
+
         player_select_state = I_SELECT;
-        
+
         wii_data.button_h = 0;
         wii_data.button_l = 0;
         game_player = 0;
@@ -625,11 +637,14 @@ static void game_draw_random_platform(const uint8_t rand_platform)
 {
     uint8_t i;
     xy_point p1, p2;
+    char platform[GAME_PLATFORM_COORDS];
+
+    memcpy_P(&platform, (PGM_P)pgm_read_word(&(game_platform_templates[rand_platform])), sizeof platform);
 
     for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
-        p1.x = game_platform_templates[rand_platform][i];
+        p1.x = (uint8_t)platform[i];
         p1.y = (game_yshift.value + YSTART) & YMOD;
-        p2.x = game_platform_templates[rand_platform][i+1];
+        p2.x = (uint8_t)platform[i + 1];
         p2.y = (game_yshift.value + YSTART) & YMOD;
         glcdDrawLine(p1, p2, &glcdSetPixel);
     }
@@ -688,7 +703,7 @@ static int8_t game_platform_under_ball(void)
         if(distance > 5){
             game_platforms.tail = (game_platforms.tail + 1) & 7;
 
-        /* platform right below or besides ball, return */
+            /* platform right below or besides ball, return */
         }else if(distance >= -1 && distance <= 3){
             return +i;
 
@@ -709,6 +724,7 @@ static void game_collision_check(void)
     platform_data_t platform_data;
     uint8_t collision_left, collision_right;
     uint8_t platform_left, platform_right;
+    char platform[GAME_PLATFORM_COORDS];
     uint8_t ball_left, ball_right;
     uint8_t gravity, i;
     int8_t platform_idx;
@@ -727,11 +743,11 @@ static void game_collision_check(void)
     /* platform under ball */
     if(platform_idx != -1){
         platform_data = game_platforms.buff[platform_idx];
-
+        memcpy_P(&platform, (PGM_P)pgm_read_word(&(game_platform_templates[platform_data.platform_nr])), sizeof platform);
         /* check all windows of platform */
         for(i = 0; i < GAME_PLATFORM_COORDS; i += 2){
-            platform_left  = game_platform_templates[platform_data.platform_nr][i];
-            platform_right = game_platform_templates[platform_data.platform_nr][i+1];
+            platform_left = (uint8_t)platform[i];
+            platform_right = (uint8_t)platform[i + 1];
 
             /* ball not over window, unset gravity */
             if(ball_right >= platform_left && ball_left <= platform_right){
@@ -853,6 +869,8 @@ static void game_set_ball_x(void)
  */
 static void wii_conn_callback(uint8_t wii, connection_status_t status)
 {
+    (void)wii;
+
     /* set connection status */
     wii_data.conn_status = status;
 
@@ -871,6 +889,8 @@ static void wii_conn_callback(uint8_t wii, connection_status_t status)
  */
 static void wii_rcv_button(uint8_t wii, uint16_t buttonStates)
 {
+    (void)wii;
+
     wii_data.button_h |= (uint8_t)(buttonStates >> 8);
     wii_data.button_l |= (uint8_t)buttonStates;
 }
@@ -884,6 +904,10 @@ static void wii_rcv_button(uint8_t wii, uint16_t buttonStates)
  */
 static void wii_rcv_accel(uint8_t wii, uint16_t x, uint16_t y, uint16_t z)
 {
+    (void)wii;
+    (void)y;
+    (void)z;
+
     /* x has 10bit, y and z 9bit precission */
     wii_data.accel_x = (uint8_t)(x >> 2);
 }

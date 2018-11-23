@@ -46,9 +46,9 @@
 #define DISP_OFF	(0)
 
 #define NOP()           asm volatile( "nop\n\t" ::);    /* 62.5ns delay */
-#define SET_UP_DELAY()  asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 200ns delay */
-#define DATA_RDY_DELAY() asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 320ns delay */
-#define HOLD_DELAY()    asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::);  /* > 450ns delay */
+#define SET_UP_DELAY()  asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 200ns delay */
+#define DATA_RDY_DELAY() asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::); /* > 320ns delay */
+#define HOLD_DELAY()    asm volatile( "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" "nop\n\t" ::);  /* > 450ns delay */
 
 /* global variables */
 typedef struct{
@@ -130,8 +130,6 @@ uint8_t halGlcdInit(void)
  */
 static void halGlcdCtrlWriteCmd(const uint8_t controller, const display_cmd_t cmd, const uint8_t data)
 {
-    HOLD_DELAY()
-
     halGlcdCtrlSelect(controller);
     
     halGlcdCtrlBusyWait();

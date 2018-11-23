@@ -53,6 +53,7 @@ typedef enum{
     I_IDLE,
 } I_STATE;
 
+
 #define WII_INIT_TABLE_LEN (2)
 const char sync_txt[] PROGMEM = "Please press sync!";
 const char connect_txt[] PROGMEM = "connecting...";
@@ -123,15 +124,24 @@ PGM_P const hs_table[] PROGMEM =
 /* game platform coords has to be multiple of 2 */
 #define GAME_PLATFORM_COORDS (6)
 /* three platforms per line with at least 6 pixel gaps = 6 x-coords out of [0,127] */
-const uint8_t game_platform_templates[GAME_PLATFORM_NR][GAME_PLATFORM_COORDS] = { 
-    {0, 5, 15, 97, 110, 127},
-    {8, 44, 52, 100, 108, 127},
-    {0, 66, 75, 111, 120, 127}, 
-    {0, 20, 29, 88, 110, 127},
-    {0, 0, 0, 0, 20, 118},
-    {0, 0, 15, 70, 100, 127},
-    {0, 0, 0, 0, 21, 127},
-    {0, 0, 0, 0, 0, 106},
+const char platform0[] PROGMEM = {0, 5, 15, 97, 110, 127};
+const char platform1[] PROGMEM = {8, 44, 52, 100, 108, 127};
+const char platform2[] PROGMEM = {0, 66, 75, 111, 120, 127}; 
+const char platform3[] PROGMEM = {0, 20, 29, 88, 110, 127};
+const char platform4[] PROGMEM = {0, 0, 0, 0, 20, 118};
+const char platform5[] PROGMEM = {0, 0, 15, 70, 100, 127};
+const char platform6[] PROGMEM = {0, 0, 0, 0, 21, 127};
+const char platform7[] PROGMEM = {0, 0, 0, 0, 0, 106};
+
+PGM_P const game_platform_templates[GAME_PLATFORM_NR] PROGMEM = { 
+    platform0,
+    platform1,
+    platform2,
+    platform3,
+    platform4,
+    platform5,
+    platform6,
+    platform7
 };
 
 

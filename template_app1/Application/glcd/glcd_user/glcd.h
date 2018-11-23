@@ -3,6 +3,8 @@
 
 #include    "../font/font.h"
 
+#define GLCD_CLEAR  (0x00)
+
 typedef struct xy_point_t {
     uint8_t x, y;
 } xy_point;
